@@ -28,7 +28,7 @@ abstract class FpmTestBase extends UnitTestCase
    *
    * @var FieldHelper
    */
-  private $fieldHelper;
+  protected $fieldHelper;
 
   /**
    * The entity helper instance.
@@ -66,13 +66,6 @@ abstract class FpmTestBase extends UnitTestCase
   protected $fields;
 
   /**
-   * The paragraphs bundles names.
-   *
-   * @var array
-   */
-  protected $bundles;
-
-  /**
    * The services to mock.
    *
    * @var string[]
@@ -84,10 +77,7 @@ abstract class FpmTestBase extends UnitTestCase
    */
   protected function setUp()
   {
-    $this->bundles = array(
-      'bundle_one' => 'bundle_one',
-    );
-    $this->fieldHelper = new FieldHelper($this->getTargetInfo(), $this->bundles);
+    $this->fieldHelper = new FieldHelper($this->getTargetInfo());
     $this->fields = $this->fieldHelper->fields;
     $this->entityHelper = new EntityHelper();
     $this->node = $this->entityHelper->node;
@@ -141,7 +131,8 @@ abstract class FpmTestBase extends UnitTestCase
   private function initWrapper(){
     $method = $this->getMethod('Drupal\feeds_para_mapper\Feeds\Target\WrapperTarget', 'prepareTarget')->getClosure();
     $this->feedType = $this->getFeedTypeMock();
-    $field = $this->fields[0]->reveal();
+    $field = $this->fields[1]->reveal();
+    $field->set('target_info', $this->getTargetInfo());
     $configuration = [
       'feed_type' => $this->feedType,
       'target_definition' => $method($field),

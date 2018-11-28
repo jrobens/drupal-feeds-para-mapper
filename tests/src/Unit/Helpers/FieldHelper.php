@@ -16,38 +16,63 @@ class FieldHelper
   public $fields;
   public $paragraphField;
   public $bundles;
+  public $node_bundle;
   protected $prophet;
   protected $targetInfo;
-  public function __construct(TargetInfo $targetInfo, $bundles)
+  public function __construct(TargetInfo $targetInfo)
   {
     $this->prophet = new Prophet();
     $this->targetInfo = $targetInfo;
-    $this->bundles = $bundles;
+    $this->bundles = array(
+      'bundle_one' => 'bundle_one',
+      'bundle_two' => 'bundle_two',
+    );
+    $this->node_bundle = "product";
     $this->fields = $this->getFields();
   }
   protected function getFields(){
+    // @todo: add multiple bundles field:
     $fields = array();
+
     $fieldsConfig = array(
-      array(
-        'name' => 'paragraph_field',
-        'type' => 'entity_reference_revisions',
-        'id' => 1,
-        'settings' => array(
+      new FieldConfig(
+        'paragraph_field',
+        'entity_reference_revisions',
+        1,
+        1,
+        array(
           'handler_settings' => array(
-            'target_bundles' => $this->bundles,
+            'target_bundles' => array($this->bundles['bundle_one']),
           ),
         ),
-        'host_type' => 'node',
+        'node',
+        'product'
       ),
-      array(
-        'name' => 'text_field',
-        'type' => 'text',
-        'id' => 2,
-        'settings' => array(
+      new FieldConfig(
+        'bundle_one_bundle_two',
+        'entity_reference_revisions',
+        2,
+        1,
+        array(
+          'handler_settings' => array(
+            'target_bundles' => array($this->bundles['bundle_two']),
+          ),
+        ),
+        'paragraph',
+        'bundle_one'
+      ),
+      new FieldConfig(
+        'bundle_two_text',
+        'text',
+        3,
+        -1,
+        array(
           'handler_settings' => array(),
         ),
-        'host_type' => 'paragraph'
+        'paragraph',
+        'bundle_two'
       ),
+
     );
     foreach ($fieldsConfig as $fieldConfig) {
       $field = $this->getField($fieldConfig);
@@ -55,37 +80,45 @@ class FieldHelper
     }
     return $fields;
   }
-  public function getField($config = array()){
-    $field = $this->prophet->prophesize(FieldConfigInterface::class);
 
-    $field->getType()->willReturn($config['type']);
-    $field->getSettings()->willReturn($config['settings']);
+  /**
+   * @param FieldConfig $config
+   * @return \Prophecy\Prophecy\ObjectProphecy
+   */
+  public function getField(FieldConfig $config){
+    $that = $this;
+    $field = $this->prophet->prophesize(FieldConfigInterface::class);
+    $field->getType()->willReturn($config->type);
+    $field->getSettings()->willReturn($config->settings);
     $field->getSetting(Argument::type('string'))
-      ->willReturn($config['settings']['handler_settings']);
-    $field->getTargetEntityTypeId()->willReturn($config['host_type']);
-    $field->getName()->willReturn($config['name']);
-    $field->id()->willReturn($config['id']);
-    $field->get('target_info')->willReturn($this->targetInfo);
+      ->willReturn($config->settings['handler_settings']);
+    $field->getTargetEntityTypeId()->willReturn($config->host_type);
+    $field->getName()->willReturn($config->name);
+    $field->id()->willReturn($config->id);
+    $field->bundle()->willReturn($config->host_bundle);
     $field->get(Argument::type('string'))->will(function ($args) {
-      if(isset($this->{$args[0]})){
-        return $this->{$args[0]};
+      $field = $this->reveal();
+      if(isset($field->{$args[0]})){
+        return $field->{$args[0]};
       }
       return null;
     });
     $field->set(Argument::type('string'),Argument::any())->will(function ($args){
-      $this->{$args[0]} = $args[1];
+      $field = $this->reveal();
+      $field->{$args[0]} = $args[1];
     });
-    $field->getFieldStorageDefinition()->willReturn($this->getFieldStorageMock());
+    $field->set('cardinality', Argument::type('string'))->will(function ($args) use ($config) {
+      $config->cardinality = $args[1];
+    });
+    $field->getFieldStorageDefinition()->will(function ($args) use ($that, $config){
+      return $that->getFieldStorageMock($config);
+    });
+    $field->set('bundle',$config->host_bundle);
     return $field;
   }
-  protected function getFieldStorageMock(){
+  protected function getFieldStorageMock(FieldConfig $config){
     $storage = $this->prophet->prophesize(FieldStorageDefinitionInterface::class);
-    $storage->getCardinality()->willReturn('1');
-    return $storage->reveal();
-  }
-  protected function getFieldStorage(){
-    $storage = $this->prophet->prophesize(FieldStorageDefinitionInterface::class);
-    $storage->getCardinality()->willreturn(1);
+    $storage->getCardinality()->willReturn((string) $config->cardinality);
     return $storage->reveal();
   }
 
@@ -100,12 +133,34 @@ class FieldHelper
     $that = $this;
     $manager->getFieldDefinitions(Argument::type('string'),Argument::type('string'))
       ->will(function($args) use ($that){
-        if($args[0] === 'paragraph'){
-          return array($that->fields[1]->reveal());
+        switch ($args[0]){
+          case "paragraph":
+            $fields = $that->getBundleFields($args[1]);
+            return $fields;
+          case "node":
+            return array($that->fields[0]->reveal());
+          default:
+            return null;
         }
-        return array($that->fields[0]->reveal());
       });
     return $manager->reveal();
+  }
+
+  /**
+   * Get all fields for a bundle.
+   *
+   * @var string $bundle
+   *
+   * @return \Prophecy\Prophecy\ObjectProphecy[]
+   */
+  public function getBundleFields($bundle){
+    $result = array();
+    foreach ($this->fields as $field) {
+      if($field->reveal()->bundle() == $bundle){
+        array_push($result, $field);
+      }
+    }
+    return $result;
   }
 
   /**
@@ -128,5 +183,4 @@ class FieldHelper
       });
     return $bundleInfo->reveal();
   }
-
 }

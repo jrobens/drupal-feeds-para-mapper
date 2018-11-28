@@ -5,7 +5,6 @@ use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldStorageDefinitionInterface;
-use Drupal\feeds\FieldTargetDefinition;
 use Drupal\feeds\Plugin\Type\FeedsPluginManager;
 use Drupal\feeds_para_mapper\Utility\TargetInfo;
 use Drupal\field\FieldConfigInterface;
@@ -44,16 +43,16 @@ class Mapper
   /**
    * @param string $entityType
    * @param string $bundle
-   * @param bool $withPath
    *
    * @return FieldConfigInterface[]
    */
-  public function getTargets($entityType, $bundle, $withPath = TRUE)
+  public function getTargets($entityType, $bundle)
   {
-    $paragraphs_fields = $this->findParagraphsFields($entityType,$bundle);
+    $paragraphs_fields = $this->findParagraphsFields($entityType, $bundle);
     $fields = array();
     foreach ($paragraphs_fields as $paragraphs_field) {
-      $fields += $this->getSubFields($paragraphs_field, $withPath);
+      $subFields = $this->getSubFields($paragraphs_field);
+      $fields = array_merge($fields, $subFields);
     }
     // Remove the fields that don't support feeds:
     $definitions = $this->targetsManager->getDefinitions();
@@ -100,13 +99,15 @@ class Mapper
 
   /**
    * @param FieldDefinitionInterface $target
-   * @param bool $with_path
    * @param array $result
    * @param array $first_host
    * @return array
    */
-  public function getSubFields($target, $with_path = FALSE, array $result = array(), array $first_host = array()){
+  public function getSubFields($target, array $result = array(), array $first_host = array()){
     $settings = $target->getSettings();
+    if(!isset($settings['handler_settings']['target_bundles'])){
+      return array();
+    }
     $target_bundles = $settings['handler_settings']['target_bundles'];
     $target_bundles = array_values($target_bundles);
     foreach ($target_bundles as $target_bundle) {
@@ -126,7 +127,7 @@ class Mapper
         // If we found nested Paragraphs field,
         // loop through its sub fields to include them:
         if ($sub_field->getType() === 'entity_reference_revisions') {
-          $result = $this->getSubFields($sub_field, $with_path, $result, $first_host);
+          $result = $this->getSubFields($sub_field, $result, $first_host);
         }
         else if($sub_field->getType() !== "feeds_item"){
           $host_allowed = $target->getFieldStorageDefinition()->getCardinality();
@@ -139,12 +140,9 @@ class Mapper
             }
           }
           $this->updateInfo($sub_field, "has_settings", $has_settings);
-
-          if ($with_path) {
-            $path = $this->buildPath($sub_field, $first_host);
-            $this->updateInfo($sub_field, "path", $path);
-            $this->setFieldsInCommon($sub_field, $result);
-          }
+          $path = $this->buildPath($sub_field, $first_host);
+          $this->updateInfo($sub_field, "path", $path);
+          $this->setFieldsInCommon($sub_field, $result);
           $result[] = $sub_field;
         }
       }
@@ -153,31 +151,44 @@ class Mapper
   }
 
   /**
+   * Updates a property of TargetInfo object.
+   *
    * @param FieldDefinitionInterface $field
    * @param $property
    * @param $value
+   *
+   * @return bool
+   *   true on success.
    */
   public function updateInfo(FieldDefinitionInterface $field, $property, $value){
     $info = $field->get('target_info');
     if(!isset($info)){
       $info = new TargetInfo();
     }
-    $info->{$property} = $value;
-    $field->set('target_info', $info);
+    $res = false;
+    if( property_exists(TargetInfo::class, $property)){
+      $info->{$property} = $value;
+      $field->set('target_info', $info);
+      $res = true;
+    }
+    return $res;
   }
 
   /**
-   * @param mixed $targetDefinition
+   * @param FieldDefinitionInterface $field
    * @param string $property
    * @return mixed
    */
-  public function getInfo($targetDefinition, $property){
-    $field = $targetDefinition;
-    if($targetDefinition instanceof FieldTargetDefinition){
-      $field = $targetDefinition->getFieldDefinition();
-    }
+  public function getInfo(FieldDefinitionInterface $field, $property){
     $info = $field->get('target_info');
-    return $info->{$property};
+    if(!isset($info)){
+      $info = new TargetInfo();
+    }
+    $res = null;
+    if(property_exists(TargetInfo::class, $property)){
+      $res = $info->{$property};
+    }
+    return $res;
   }
 
   /**
@@ -185,7 +196,7 @@ class Mapper
    *
    * @param FieldDefinitionInterface $field
    *   The target fields.
-   * @param array $fields
+   * @param FieldDefinitionInterface[] $fields
    *   The other collected fields so far.
    */
   private function setFieldsInCommon(FieldDefinitionInterface &$field, array &$fields) {
@@ -317,18 +328,18 @@ class Mapper
    *   The maximum values
    */
   public function getMaxValues(FieldDefinitionInterface $target, array $configuration = null) {
-    $cardinality = (int) $target->getFieldStorageDefinition()->getCardinality();
+    $crd = (int) $target->getFieldStorageDefinition()->getCardinality();
     if(!isset($configuration['max_values'])){
-      return $cardinality;
+      return $crd;
     }
-    $unlimited = $cardinality === -1;
+    $unlimited = $crd === -1;
     $max_values = (int) $configuration['max_values'];
-    $valid = $max_values >= -1 && $max_values !== 0;
-    if ($max_values <= $cardinality && $valid || ($unlimited && -1 <= $max_values && $valid)) {
+    $valid = $max_values <= $crd && !$unlimited && !($max_values < 0 && $crd > 0) || $unlimited && $max_values >= -1;
+    if ($valid){
       $res = $max_values;
     }
     else {
-      $res = $cardinality;
+      $res = $crd;
     }
     return $res;
   }

@@ -68,7 +68,8 @@ function feeds_para_mapper_feeds_targets_alter(&$targets)
 function feeds_para_mapper_entity_update(Drupal\Core\Entity\EntityInterface $entity)
 {
   if(isset($entity->fpm_targets)){
-    Importer::finalize($entity);
+    $importer = Drupal::service('feeds_para_mapper.importer');
+    $importer::finalize($entity);
   }
 }
 

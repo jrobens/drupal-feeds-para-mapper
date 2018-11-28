@@ -89,6 +89,9 @@ class WrapperTarget extends FieldTargetBase implements ConfigurableTargetInterfa
     foreach ($sub_fields as $field) {
       $field->set('field_type', 'entity_reference_revisions');
       $wrapper_target = self::prepareTarget($field);
+      if(!isset($wrapper_target)){
+        continue;
+      }
       $wrapper_target->setPluginId("wrapper_target");
       $id = $field->getName();
       $targets[$id] = $wrapper_target;
@@ -128,6 +131,9 @@ class WrapperTarget extends FieldTargetBase implements ConfigurableTargetInterfa
     $mapper = \Drupal::service('feeds_para_mapper.mapper');
     $field_type = $mapper->getInfo($field_definition,'type');
     $plugin = $mapper->getInfo($field_definition,'plugin');
+    if(!isset($field_type) || !isset($plugin)){
+      return null;
+    }
     $class = $plugin['class'];
     $field_definition->set('field_type', $field_type);
     $targetDef = $class::prepareTarget($field_definition);
