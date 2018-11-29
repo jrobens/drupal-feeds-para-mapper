@@ -35,7 +35,7 @@ abstract class FpmTestBase extends UnitTestCase
    *
    * @var EntityHelper
    */
-  private $entityHelper;
+  protected $entityHelper;
 
   /**
    * The wrapper instance.
@@ -73,13 +73,27 @@ abstract class FpmTestBase extends UnitTestCase
   protected $services;
 
   /**
+   * The target mock
+   *
+   * @var ObjectProphecy
+   */
+  protected $instanceMock;
+
+  /**
+   * The target object.
+   *
+   * @var FieldTargetBase
+   */
+  protected $target;
+
+  /**
    * @inheritdoc
    */
   protected function setUp()
   {
     $this->fieldHelper = new FieldHelper($this->getTargetInfo());
     $this->fields = $this->fieldHelper->fields;
-    $this->entityHelper = new EntityHelper();
+    $this->entityHelper = new EntityHelper($this->fieldHelper);
     $this->node = $this->entityHelper->node;
     $services = array(
       'feeds_para_mapper.mapper' => $this->getMapperObject(),
@@ -106,8 +120,9 @@ abstract class FpmTestBase extends UnitTestCase
 
   /**
    * Returns a mocked field target object.
-   * @return FieldTargetBase
-   *   The field target instance.
+   *
+   * @return ObjectProphecy
+   *   The mock object.
    */
   abstract function getInstanceMock();
 
@@ -139,6 +154,11 @@ abstract class FpmTestBase extends UnitTestCase
     ];
     $id = "wrapper_target";
     $plugin_definition = array();
+
+    // Sets instanceMock and target variables:
+    $target = $this->getInstanceMock();
+    $this->instanceMock = $target;
+    $this->target = $target->reveal();
     $plugin_manager = $this->getPluginManagerMock();
     $mapper = $this->getMapperObject();
     $messenger = $this->getMessengerMock();
@@ -220,7 +240,7 @@ abstract class FpmTestBase extends UnitTestCase
     $manager = $this->prophesize(FeedsPluginManager::class);
     try {
       $manager->createInstance(Argument::type('string'), Argument::type('array'))
-        ->willReturn($this->getInstanceMock());
+        ->willReturn($this->target);
     } catch (PluginException $e) {
 
     }

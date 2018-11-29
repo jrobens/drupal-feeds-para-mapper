@@ -133,17 +133,30 @@ class FieldHelper
     $that = $this;
     $manager->getFieldDefinitions(Argument::type('string'),Argument::type('string'))
       ->will(function($args) use ($that){
-        switch ($args[0]){
-          case "paragraph":
-            $fields = $that->getBundleFields($args[1]);
-            return $fields;
-          case "node":
-            return array($that->fields[0]->reveal());
-          default:
-            return null;
-        }
+        return $that->getFieldDefinitions($args[0], $args[1]);
       });
     return $manager->reveal();
+  }
+
+  public function getFieldDefinitions($entity_type, $bundle){
+    $result = null;
+    switch ($entity_type){
+      case "paragraph":
+        $result = $this->getBundleFields($bundle);
+        break;
+      case "node":
+        $result = array($this->fields[0]);
+        break;
+    }
+    if(isset($result)){
+      $fields = array();
+      foreach ($result as $field) {
+        $name = $field->reveal()->getName();
+        $fields[$name] = $field;
+      }
+      return $fields;
+    }
+    return null;
   }
 
   /**

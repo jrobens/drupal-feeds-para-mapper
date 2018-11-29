@@ -1,7 +1,6 @@
 <?php
 namespace Drupal\Tests\feeds_para_mapper\Unit;
 
-use Drupal\feeds\Plugin\Type\Target\FieldTargetBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\feeds\Feeds\Target\Text;
 use Drupal\feeds_para_mapper\Feeds\Target\WrapperTarget;
@@ -21,23 +20,12 @@ class TestWrapperTarget extends FpmTestBase {
    * @var string
    */
   protected $type;
-  /**
-   * @var FieldTargetBase
-   */
-  protected $instanceMock;
-
-  /**
-   * The FeedsTarget plugin being tested.
-   *
-   * @var Text
-   */
-  protected $target;
 
   protected function setUp()
   {
     $this->class        = Text::class;
     $this->type         = "text";
-    $this->instanceMock = $this->getInstanceMock();
+    $this->getInstanceMock();
     parent::setUp();
     $this->addServices($this->services);
   }

@@ -4,6 +4,7 @@ namespace Drupal\feeds_para_mapper;
 use Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException;
 use Drupal\Component\Plugin\Exception\PluginNotFoundException;
 use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\Core\Entity\Entity;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityStorageException;
 use Drupal\Core\Entity\EntityStorageInterface;
@@ -622,7 +623,8 @@ class Importer {
    *   The non-existing parents array.
    */
   private function removeExistingParents(array $parents) {
-    $findByField = function ($entity, $field) use (&$findByField) {
+    $field_manager = $this->field_manager;
+    $findByField = function ($entity, $field) use (&$findByField, $field_manager) {
       $p_c = Paragraph::class;
       $found = NULL;
       if (get_class($entity) === $p_c) {
@@ -634,7 +636,9 @@ class Importer {
         $found = $entity;
       }
       else {
-        $fields = $entity->getFieldDefinitions();
+        $type = $entity->getEntityTypeId();
+        $bundle = $entity->bundle();
+        $fields = $field_manager->getFieldDefinitions($type,$bundle);
         $fields = array_filter($fields, function ($field){
           return $field instanceof FieldConfigInterface;
         });
@@ -684,10 +688,8 @@ class Importer {
    *   The created Paragraphs entity
    */
   private function createParagraph($field, $bundle, $host_entity) {
-    $created = Paragraph::create([
-      "type" => $bundle,
-    ]);
-    $host_entity->{$field}->appendItem($created);
+    $created = $this->paragraph_storage->create(array("type" => $bundle));
+    $host_entity->get($field)->appendItem($created);
     $host_info = array(
       'type' => $host_entity->getEntityTypeId(),
       'entity' => $host_entity,

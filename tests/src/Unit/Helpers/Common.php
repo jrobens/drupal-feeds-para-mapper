@@ -1,16 +1,8 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: Hussein
- * Date: 11/27/2018
- * Time: 3:34 PM
- */
-
 namespace Drupal\Tests\feeds_para_mapper\Unit\Helpers;
 
 
 use Drupal\feeds\Feeds\Target\Text;
-use Drupal\feeds\Plugin\Type\Target\FieldTargetBase;
 use Drupal\feeds_para_mapper\Utility\TargetInfo;
 use Prophecy\Argument;
 
@@ -53,10 +45,7 @@ trait Common
   }
 
   /**
-   * Returns a mocked field target object.
-   *
-   * @return FieldTargetBase
-   *   The field target instance.
+   * @inheritdoc
    */
   public function getInstanceMock()
   {
@@ -75,8 +64,11 @@ trait Common
     $text->submitConfigurationForm(Argument::any(),Argument::any())
       ->willReturn(null);
     $text->getSummary()->willReturn($translation->translate("test summary"));
-    $this->instanceMock = $text;
-    $this->target = $text->reveal();
-    return $this->target;
+    $text->setTarget(Argument::any(), Argument::any(), Argument::any(), Argument::any())->will(function($args){
+      // @todo: maybe attach the value here
+      $stop = null;
+      return null;
+    });
+    return $text;
   }
 }
