@@ -10,6 +10,7 @@ use Drupal\Tests\feeds_para_mapper\Unit\Helpers\Common;
 use Prophecy\Argument;
 
 /**
+ * @group Feeds Paragraphs
  * @coversDefaultClass \Drupal\feeds_para_mapper\Importer
  */
 class TestImporter extends FpmTestBase

@@ -10,7 +10,7 @@ use Drupal\Tests\feeds_para_mapper\Unit\Helpers\FieldConfig;
 
 
 /**
- * Class TestMapper
+ * @group Feeds Paragraphs
  * @coversDefaultClass \Drupal\feeds_para_mapper\Mapper
  */
 class TestMapper extends FpmTestBase
