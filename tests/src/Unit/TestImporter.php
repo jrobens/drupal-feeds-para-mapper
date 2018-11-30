@@ -3,9 +3,13 @@
 namespace Drupal\Tests\feeds_para_mapper\Unit;
 
 
+use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
+use Drupal\entity_reference_revisions\EntityReferenceRevisionsFieldItemList;
 use Drupal\feeds\Feeds\Target\Text;
 use Drupal\feeds_para_mapper\Importer;
+use Drupal\paragraphs\Entity\Paragraph;
 use Drupal\Tests\feeds_para_mapper\Unit\Helpers\Common;
 use Prophecy\Argument;
 
@@ -51,10 +55,9 @@ class TestImporter extends FpmTestBase
     $this->initImporter();
   }
   protected function initImporter(){
-    $ref = new \ReflectionObject($this->importer);
     $propsValues = array(
       'feed'          => $this->getFeedMock(),
-      'entity'        => $this->node,
+      'entity'        => $this->node->reveal(),
       'target'        => $this->field,
       'configuration' => array('max_values' => 1),
       'values'        => array( array('value' => "Test value")),
@@ -62,9 +65,7 @@ class TestImporter extends FpmTestBase
       'instance'      => $this->wrapperTarget->createTargetInstance(),
     );
     foreach ($propsValues as $prop => $value) {
-      $prop = $ref->getProperty($prop);
-      $prop->setAccessible(true);
-      $prop->setValue($this->importer, $value);
+      $this->updateProperty($this->importer,$prop, $value);
     }
   }
   /**
@@ -82,7 +83,7 @@ class TestImporter extends FpmTestBase
       ),
     );
     $instance = $this->wrapperTarget->createTargetInstance();
-    $this->importer->import($feed, $entity, $this->field, $config, $values, $instance);
+    $this->importer->import($feed, $entity->reveal(), $this->field, $config, $values, $instance);
     $this->instanceMock
       ->setTarget(Argument::any(),Argument::any(),Argument::any(),Argument::any())
       ->shouldHaveBeenCalled();
@@ -101,6 +102,48 @@ class TestImporter extends FpmTestBase
       self::assertTrue(count($host_info) === 4, "The info array should contain 4 items");
       $value = $item['value'];
       self::assertTrue(count($value) > 0, "The value key contains values");
+    }
+  }
+
+  /**
+   *
+   * @covers ::getTarget
+   */
+  public function testGetTarget(){
+    $method = $this->getMethod(Importer::class,'getTarget');
+    $any = Argument::any();
+    $str = Argument::type('string');
+    $paragraph = $this->prophesize(Paragraph::class);
+    $paragraph->hasField($any)->willReturn(true);
+    $values = array(array('entity' => $paragraph));
+    $this->node->hasField($str)->willReturn(true);
+    $fieldItem = $this->prophesize(EntityReferenceRevisionsFieldItemList::class);
+    $fieldItem->getValue()->willReturn($values);
+    $this->node->get($str)->willReturn($fieldItem->reveal());
+    $args = array($this->node->reveal(), $this->field);
+    // Call getTarget:
+    $result = $method->invokeArgs($this->importer,$args);
+    self::assertNotEmpty($result, "Result not empty");
+    foreach ($result as $item) {
+      self::assertInstanceOf(Paragraph::class, $item, "The result item is paragraph");
+    }
+    // Test with non-nested field:
+    $info = $this->field->get('target_info');
+    $info->path = array(
+      array (
+        'bundle' => 'bundle_one',
+        'host_field' => 'paragraph_field',
+        'host_entity' => 'node',
+        'order' => 0,
+      ),
+    );
+    $this->field->set('target_info', $info);
+    $args = array($paragraph->reveal(), $this->field);
+    // Call getTarget:
+    $result = $method->invokeArgs($this->importer,$args);
+    self::assertNotEmpty($result, "Result not empty");
+    foreach ($result as $item) {
+      self::assertInstanceOf(Paragraph::class, $item, "The result item is paragraph");
     }
   }
 }

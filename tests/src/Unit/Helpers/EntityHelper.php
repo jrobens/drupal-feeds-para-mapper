@@ -6,19 +6,19 @@ namespace Drupal\Tests\feeds_para_mapper\Unit\Helpers;
 
 use Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException;
 use Drupal\Component\Plugin\Exception\PluginNotFoundException;
-use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\entity_reference_revisions\EntityReferenceRevisionsFieldItemList;
 use Drupal\node\Entity\Node;
 use Drupal\paragraphs\Entity\Paragraph;
 use Prophecy\Argument;
+use Prophecy\Prophecy\ObjectProphecy;
 use Prophecy\Prophet;
 
 class EntityHelper
 {
   /**
-   * @var Node
+   * @var ObjectProphecy
    */
   public $node;
   protected $prophet;
@@ -46,7 +46,7 @@ class EntityHelper
    * @param string $bundle
    *   The entity bundle.
    *
-   * @return EntityInterface
+   * @return ObjectProphecy
    *   A mocked entity object.
    */
   private function getEntity($type, $bundle){
@@ -57,7 +57,7 @@ class EntityHelper
     $entity = $this->prophet->prophesize($class);
     $entity->isNew()->willReturn(true);
     $that = $this;
-    $entity->hasField(Argument::any())->will(function($args) use ($that, $type, $bundle){
+    $entity->hasField(Argument::type('string'))->will(function($args) use ($that, $type, $bundle){
       if($type === 'node'){
         $field = $that->fieldHelper->fields[0]->reveal()->getName();
         if($field === $args[0]){
@@ -85,7 +85,7 @@ class EntityHelper
     $entity->getFieldDefinitions()->will(function ($args) use ($that, $type, $bundle){
       return $that->fieldHelper->getFieldDefinitions($type, $bundle);
     });
-    return $entity->reveal();
+    return $entity;
   }
 
   /**
@@ -124,7 +124,7 @@ class EntityHelper
     $that = $this;
     $storage->create(Argument::type('array'))->will(function($args) use ($that){
       $bundle = $args[0]['type'];
-      return $that->getEntity('paragraph', $bundle);
+      return $that->getEntity('paragraph', $bundle)->reveal();
     });
     try {
       $manager->getStorage(Argument::type('string'))->willReturn($storage->reveal());

@@ -367,7 +367,7 @@ class Importer {
    * @param array $result
    *   The previous result.
    *
-   * @return array
+   * @return Paragraph[]
    *   The found paragraphs.
    */
   private function getTarget($entity, $targetConfig, array $result = array()) {
@@ -397,6 +397,9 @@ class Importer {
           }
         }
       }
+    }
+    elseif ($entity->hasField($target)){
+      $result[] = $entity;
     }
     return $result;
   }

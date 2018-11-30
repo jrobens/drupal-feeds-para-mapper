@@ -54,7 +54,7 @@ abstract class FpmTestBase extends UnitTestCase
   /**
    * The mocked node.
    *
-   * @var Node
+   * @var ObjectProphecy
    */
   protected $node;
 
@@ -292,6 +292,20 @@ abstract class FpmTestBase extends UnitTestCase
     $method = $class->getMethod($name);
     $method->setAccessible(TRUE);
     return $method;
+  }
+
+  /**
+   * Updates a protected, private property of an object.
+   *
+   * @param mixed $object
+   * @param string $property
+   * @param mixed $value
+   */
+  protected function updateProperty($object,$property,$value){
+    $ref = new \ReflectionObject($object);
+    $prop = $ref->getProperty($property);
+    $prop->setAccessible(true);
+    $prop->setValue($object, $value);
   }
 
   /**
