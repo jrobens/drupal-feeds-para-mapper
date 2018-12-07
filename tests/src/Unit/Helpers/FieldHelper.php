@@ -17,6 +17,12 @@ class FieldHelper
   public $paragraphField;
   public $bundles;
   public $node_bundle;
+
+  /**
+   * @var FieldConfig[]
+   */
+  public $fieldsConfig;
+
   protected $prophet;
   protected $targetInfo;
   public function __construct(TargetInfo $targetInfo)
@@ -46,7 +52,8 @@ class FieldHelper
           ),
         ),
         'node',
-        'product'
+        'product',
+        array(1)
       ),
       new FieldConfig(
         'bundle_one_bundle_two',
@@ -59,7 +66,8 @@ class FieldHelper
           ),
         ),
         'paragraph',
-        'bundle_one'
+        'bundle_one',
+        array(2)
       ),
       new FieldConfig(
         'bundle_two_text',
@@ -74,6 +82,7 @@ class FieldHelper
       ),
 
     );
+    $this->fieldsConfig = $fieldsConfig;
     foreach ($fieldsConfig as $fieldConfig) {
       $field = $this->getField($fieldConfig);
       $fields[] = $field;

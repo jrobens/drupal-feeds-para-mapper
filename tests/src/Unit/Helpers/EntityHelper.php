@@ -21,6 +21,15 @@ class EntityHelper
    * @var ObjectProphecy
    */
   public $node;
+
+  /**
+   * @var ObjectProphecy[]
+   */
+  public $paragraphs;
+
+  /**
+   * @var ObjectProphecy
+   */
   protected $prophet;
 
   /**
@@ -31,11 +40,26 @@ class EntityHelper
   /**
    * @var array
    */
-  protected $values;
+  public $values;
 
   public function __construct(FieldHelper $fieldHelper){
     $this->prophet = new Prophet();
     $this->node = $this->getEntity('node', $fieldHelper->node_bundle);
+    $this->paragraphs = array();
+    foreach ($fieldHelper->fieldsConfig as $config) {
+      $st = $config->settings['handler_settings'];
+      if(isset($st['target_bundles'])){
+        $this->values[$config->name] = array();
+        foreach ($st['target_bundles'] as $target_bundle) {
+          foreach ($config->paragraph_ids as $paragraph_id) {
+            $this->paragraphs[$paragraph_id] = $this->getEntity('paragraph', $target_bundle);
+            $this->values[$config->name][] = array(
+              'target_id' => $paragraph_id
+            );
+          }
+        }
+      }
+    }
     $this->fieldHelper = $fieldHelper;
   }
 
@@ -114,23 +138,48 @@ class EntityHelper
     });
     return $fieldItem->reveal();
   }
+
+  /**
+   * Attach value to a field
+   * @param string $field
+   *   The field.
+   * @param mixed $value
+   *   The value.
+   */
+  public function setValue($field, $value){
+    $this->values[$field] = $value;
+  }
   /** Creates entity manager instance.
    *
    * @return EntityTypeManagerInterface
    */
   public function getEntityTypeManagerMock(){
     $manager = $this->prophet->prophesize('Drupal\Core\Entity\EntityTypeManagerInterface');
+    $storage = $this->getStorageMock()->reveal();
+    try {
+      $manager->getStorage(Argument::type('string'))->willReturn($storage);
+    } catch (InvalidPluginDefinitionException $e) {
+    } catch (PluginNotFoundException $e) {
+    }
+    return $manager->reveal();
+  }
+
+  /**
+   *
+   * @return ObjectProphecy
+   *   A storage instance.
+   */
+  protected function getStorageMock(){
     $storage = $this->prophet->prophesize(EntityStorageInterface::class);
     $that = $this;
     $storage->create(Argument::type('array'))->will(function($args) use ($that){
       $bundle = $args[0]['type'];
       return $that->getEntity('paragraph', $bundle)->reveal();
     });
-    try {
-      $manager->getStorage(Argument::type('string'))->willReturn($storage->reveal());
-    } catch (InvalidPluginDefinitionException $e) {
-    } catch (PluginNotFoundException $e) {
-    }
-    return $manager->reveal();
+    $storage->load(Argument::any())->will(function($args) use ($that){
+      $id = $args[0];
+      return $that->paragraphs[$id];
+    });
+    return $storage;
   }
 }

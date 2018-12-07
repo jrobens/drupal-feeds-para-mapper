@@ -398,7 +398,13 @@ class Importer {
         }
       }
     }
-    elseif ($entity->hasField($target)){
+    elseif ($entity->hasField($path[0]['host_field'])){
+      $values = $entity->get($path[0]['host_field'])->getValue();
+      foreach ($values as $value) {
+        $result[] = $value['entity'];
+      }
+    }
+    elseif ($entity instanceof Paragraph && $entity->hasField($path[0]['host_field'])) {
       $result[] = $entity;
     }
     return $result;
@@ -441,6 +447,15 @@ class Importer {
               }
             }
           }
+        }
+      }
+    }
+    elseif ($entity->hasField($path[0]['host_field'])) {
+      $values = $entity->get($path[0]['host_field'])->getValue();
+      foreach ($values as $value) {
+        $paragraph = $storage->load($value['target_id']);
+        if ($paragraph) {
+          $result[] = $paragraph;
         }
       }
     }

@@ -2,13 +2,11 @@
 
 namespace Drupal\Tests\feeds_para_mapper\Unit;
 
-
-use Drupal\Core\Entity\ContentEntityInterface;
-use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\entity_reference_revisions\EntityReferenceRevisionsFieldItemList;
 use Drupal\feeds\Feeds\Target\Text;
 use Drupal\feeds_para_mapper\Importer;
+use Drupal\feeds_para_mapper\Utility\TargetInfo;
 use Drupal\paragraphs\Entity\Paragraph;
 use Drupal\Tests\feeds_para_mapper\Unit\Helpers\Common;
 use Prophecy\Argument;
@@ -72,6 +70,7 @@ class TestImporter extends FpmTestBase
    * @covers ::import
    */
   public function testImport(){
+    $this->entityHelper->values = array();
     $feed = $this->getFeedMock();
     $entity = $this->entityHelper->node;
     $config = array(
@@ -93,6 +92,7 @@ class TestImporter extends FpmTestBase
    * @covers ::initHostParagraphs
    */
   public function testInitHostParagraphs(){
+    $this->entityHelper->values = array();
     $method = $this->getMethod(Importer::class,'initHostParagraphs');
     $result = $method->invoke($this->importer);
     foreach ($result as $item) {
@@ -110,16 +110,18 @@ class TestImporter extends FpmTestBase
    * @covers ::getTarget
    */
   public function testGetTarget(){
+    $this->entityHelper->values = array();
     $method = $this->getMethod(Importer::class,'getTarget');
     $any = Argument::any();
     $str = Argument::type('string');
     $paragraph = $this->prophesize(Paragraph::class);
     $paragraph->hasField($any)->willReturn(true);
-    $values = array(array('entity' => $paragraph));
+    $values = array(array('entity' => $paragraph->reveal()));
     $this->node->hasField($str)->willReturn(true);
     $fieldItem = $this->prophesize(EntityReferenceRevisionsFieldItemList::class);
     $fieldItem->getValue()->willReturn($values);
     $this->node->get($str)->willReturn($fieldItem->reveal());
+    $paragraph->get($str)->willReturn($fieldItem->reveal());
     $args = array($this->node->reveal(), $this->field);
     // Call getTarget:
     $result = $method->invokeArgs($this->importer,$args);
@@ -145,5 +147,28 @@ class TestImporter extends FpmTestBase
     foreach ($result as $item) {
       self::assertInstanceOf(Paragraph::class, $item, "The result item is paragraph");
     }
+  }
+
+  /**
+   * @covers ::loadTarget
+   */
+  public function testLoadTarget(){
+    $method = $this->getMethod(Importer::class,'loadTarget')->getClosure();
+    $storage = $this->entityHelper->getEntityTypeManagerMock()->getStorage('paragraph');
+    $result = $method($this->node->reveal(), $this->field, $storage);
+    self::assertNotEmpty($result,"nested entities loaded");
+    // Test with non-nested field:
+    $info = $this->field->get('target_info');
+    $info->path = array(
+      array (
+        'bundle' => 'bundle_one',
+        'host_field' => 'paragraph_field',
+        'host_entity' => 'node',
+        'order' => 0,
+      ),
+    );
+    $this->field->set('target_info', $info);
+    $result = $method($this->node->reveal(), $this->field, $storage);
+    self::assertNotEmpty($result,"flat entity loaded");
   }
 }
