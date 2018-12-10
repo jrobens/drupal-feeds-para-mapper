@@ -171,4 +171,20 @@ class TestImporter extends FpmTestBase
     $result = $method($this->node->reveal(), $this->field, $storage);
     self::assertNotEmpty($result,"flat entity loaded");
   }
+
+  /**
+   * @covers ::createParagraphs
+   */
+  public function testCreateParagraphs(){
+    $this->entityHelper->values = array();
+    $method = $this->getMethod(Importer::class,'createParagraphs');
+    $values = array(array('a'), array('b'), array('c'));
+    $args = array($this->node->reveal(), $values);
+    $result = $method->invokeArgs($this->importer, $args);
+    self::assertCount(3, $result);
+    for ($i = 0; $i < count($result); $i++) {
+      self::assertArrayEquals($values[$i], $result[$i]['value']);
+      self::assertInstanceOf(Paragraph::class, $result[$i]['paragraph']);
+    }
+  }
 }
