@@ -205,4 +205,33 @@ class TestImporter extends FpmTestBase
       self::assertArrayHasKey('state', $result[$i]);
     }
   }
+
+  /**
+   * @covers ::appendParagraphs
+   */
+  public function testAppendParagraphs(){
+    // todo: set host entity
+    $this->entityHelper->values = array();
+    $method = $this->getMethod(Importer::class,'appendParagraphs');
+    $values = array(array('a'), array('b'), array('c'));
+    $paragraphs = $this->entityHelper->paragraphs;
+    $paragraphs = array_values($paragraphs);
+    $paragraph = $paragraphs[0]->reveal();
+    $paragraph->host_info = array(
+      'field' => 'paragraph_field',
+      'bundle' => 'product',
+      'entity' => $this->node->reveal(),
+      'type' => 'node',
+    );
+    $args = array(array($paragraph), $values);
+    $result = $method->invokeArgs($this->importer, $args);
+    self::assertCount(3, $result);
+    for ($i = 0; $i < count($result); $i++) {
+      self::assertArrayEquals($values[$i], $result[$i]['value']);
+      self::assertInstanceOf(Paragraph::class, $result[$i]['paragraph']);
+      self::assertArrayHasKey('state', $result[$i]);
+      $host_info = $result[$i]['paragraph']->host_info;
+      self::assertArrayEquals($paragraph->host_info, $host_info);
+    }
+  }
 }
