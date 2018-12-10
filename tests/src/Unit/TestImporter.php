@@ -187,4 +187,22 @@ class TestImporter extends FpmTestBase
       self::assertInstanceOf(Paragraph::class, $result[$i]['paragraph']);
     }
   }
+
+  /**
+   * @covers ::updateParagraphs
+   */
+  public function testUpdateParagraphs(){
+    $this->entityHelper->values = array();
+    $method = $this->getMethod(Importer::class,'updateParagraphs');
+    $values = array(array('a'), array('b'), array('c'));
+    $paragraphs = $this->entityHelper->paragraphs;
+    $first_par = reset($paragraphs);
+    $args = array(array($first_par->reveal()), $values);
+    $result = $method->invokeArgs($this->importer, $args);
+    for ($i = 0; $i < count($result); $i++) {
+      self::assertArrayEquals($values[$i], $result[$i]['value']);
+      self::assertInstanceOf(Paragraph::class, $result[$i]['paragraph']);
+      self::assertArrayHasKey('state', $result[$i]);
+    }
+  }
 }

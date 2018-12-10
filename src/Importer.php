@@ -513,6 +513,9 @@ class Importer {
     $items = array();
     $slices = $this->checkValuesChanges($slices, $entities);
     for ($i = 0; $i < count($slices); $i++) {
+      if(!isset($entities[$i])){
+        continue;
+      }
       // we should never delete data, if we should remove the entity then just ignore it,
       // we use cleanUp() to to set the fields values to null.
       if ($slices[$i]['state'] !== "remove") {
