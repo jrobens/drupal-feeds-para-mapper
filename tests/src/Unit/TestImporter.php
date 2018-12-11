@@ -210,7 +210,6 @@ class TestImporter extends FpmTestBase
    * @covers ::appendParagraphs
    */
   public function testAppendParagraphs(){
-    // todo: set host entity
     $this->entityHelper->values = array();
     $method = $this->getMethod(Importer::class,'appendParagraphs');
     $values = array(array('a'), array('b'), array('c'));
@@ -219,7 +218,7 @@ class TestImporter extends FpmTestBase
     $paragraph = $paragraphs[0]->reveal();
     $paragraph->host_info = array(
       'field' => 'paragraph_field',
-      'bundle' => 'product',
+      'bundle' => 'bundle_one',
       'entity' => $this->node->reveal(),
       'type' => 'node',
     );
@@ -233,5 +232,25 @@ class TestImporter extends FpmTestBase
       $host_info = $result[$i]['paragraph']->host_info;
       self::assertArrayEquals($paragraph->host_info, $host_info);
     }
+  }
+
+  /**
+   * @covers ::createParents
+   */
+  public function testCreateParents(){
+    $this->entityHelper->values = array();
+    $method = $this->getMethod(Importer::class,'createParents');
+    $node = $this->node->reveal();
+    $expected = array(
+      'type' => 'node',
+      'entity' => $node,
+      'bundle' => 'bundle_one',
+      'field' => 'paragraph_field',
+    );
+    $result = $method->invokeArgs($this->importer, array($node));
+    self::assertSame($expected, $result->host_info);
+    // Test with already created parents:
+    $result = $method->invokeArgs($this->importer, array($node));
+    self::assertNull($result);
   }
 }

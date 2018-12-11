@@ -569,43 +569,31 @@ class Importer {
   }
 
   /**
-   * Creates a paragraph entity and its parents.
+   * Creates a paragraph entity and its parents entities.
    *
-   * @param object $entity
+   * @param object $parent
    *   The entity that is being edited or created.
    *
    * @return EntityInterface
    *   The created paragraph entity.
    */
-  private function createParents($entity) {
+  private function createParents($parent) {
     $parents = $this->targetInfo->path;
-    $first_host_field = $parents[0]['host_field'];
-    $last_host_field = $parents[count($parents) -1]['host_field'];
-    $target = $this->target->getName();
     $or_count = count($parents);
     $p = $this->removeExistingParents($parents);
     $parents = $p['parents'];
-    $last = $entity;
+    $host = $parent;
     if (count($parents) < $or_count) {
-      $last = end($p['removed']);
+      $host = end($p['removed']);
     }
-    // For first bundle fields, determine the real host:
-//    if (!isset($this->targetInfo->host_field)) {
-//      $filtered = array_filter($parents, function ($item) use ($first_host_field) {
-//        return $item['host_field'] === $first_host_field;
-//      });
-//      if (count($filtered)) {
-//        $parents = [];
-//        $parents[] = $filtered[0];
-//      }
-//    }
     $parents = array_filter($parents, function ($item) {
       return isset($item['host_entity']);
     });
+    $first = NULL;
     foreach ($parents as $parent) {
-      $last = $this->createParagraph($parent['host_field'], $parent['bundle'], $last);
+      $host = $this->createParagraph($parent['host_field'], $parent['bundle'], $host);
       if (!isset($first)) {
-        $first = $last;
+        $first = $host;
       }
     }
     return $first;
