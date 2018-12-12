@@ -279,16 +279,12 @@ class TestImporter extends FpmTestBase
     $paragraph->isNew()->willReturn(false);
     $parObject = $paragraph->reveal();
     $result = $method->invokeArgs($this->importer, array($parObject));
-    $host_info = $result->host_info;
-    $keys = array(
-      'type',
-      'entity',
-      'bundle',
-      'field'
-    );
-    foreach ($keys as $key) {
-      self::assertArrayHasKey($key, $host_info);
-    }
+    $paragraph->isNew()->shouldHaveBeenCalled();
+    $paragraph->getParentEntity()->shouldHaveBeenCalled();
+    $paragraph->getType()->shouldHaveBeenCalled();
+    $paragraph->getParentEntity()->shouldHaveBeenCalled();
+    $paragraph->get('parent_field_name')->shouldHaveBeenCalled();
+    self::assertInstanceOf(Paragraph::class, $result);
   }
 
   /**
@@ -315,5 +311,33 @@ class TestImporter extends FpmTestBase
     $result = $method->invokeArgs($this->importer, array($path));
     self::assertCount(count($path) -1, $result['parents'], 'parents count is correct');
     self::assertCount(1, $result['removed'], 'removed is not empty');
+  }
+
+  /**
+   * @covers ::createParagraph
+   */
+  public function testCreateParagraph(){
+    $this->entityHelper->values = array();
+    $method = $this->getMethod(Importer::class,'createParagraph');
+    $node = $this->node->reveal();
+    $args = array(
+      $field = "paragraph_field",
+      $bundle = "bundle_one",
+      $node,
+    );
+    $result = $method->invokeArgs($this->importer, $args);
+    $value = $this->entityHelper->values['paragraph_field'];
+    self::assertTrue(isset($value[0]['entity']), 'the host entity has the created paragraph');
+    self::assertInstanceOf(Paragraph::class, $result);
+    $host_info = $result->host_info;
+    $keys = array(
+      'type',
+      'entity',
+      'bundle',
+      'field'
+    );
+    foreach ($keys as $key) {
+      self::assertArrayHasKey($key, $host_info);
+    }
   }
 }
