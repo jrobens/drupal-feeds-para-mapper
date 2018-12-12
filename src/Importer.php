@@ -375,7 +375,7 @@ class Importer {
     $last_key = count($path) -1;
     $last_host_field = $path[$last_key]['host_field'];
     $target = $targetConfig->getName();
-    if(count($path) > 1){
+    if (count($path) > 1) {
       $exist = $entity->hasField($last_host_field);
       if ($exist) {
         $values = $entity->get($last_host_field)->getValue();
@@ -398,13 +398,13 @@ class Importer {
         }
       }
     }
-    elseif ($entity->hasField($path[0]['host_field'])){
+    else if (!($entity instanceof Paragraph) && $entity->hasField($path[0]['host_field'])) {
       $values = $entity->get($path[0]['host_field'])->getValue();
       foreach ($values as $value) {
         $result[] = $value['entity'];
       }
     }
-    elseif ($entity instanceof Paragraph && $entity->hasField($path[0]['host_field'])) {
+    else if ($entity instanceof Paragraph && $exists = $entity->hasField($target)) {
       $result[] = $entity;
     }
     return $result;
@@ -603,7 +603,7 @@ class Importer {
    * Duplicates an existing paragraph entity.
    *
    * @param Paragraph $existing
-   *   Information about the target field and the target paragraph.
+   *   The existing Paragraph entity.
    *
    * @return Paragraph
    *   The duplicated entity, or null on failure.
@@ -616,7 +616,7 @@ class Importer {
       $host_info = array();
       $parent = $existing->getParentEntity();
       $host_info['bundle'] = $existing->getType();
-      $host_info['field'] = $existing->parent_field_name->getValue()[0]['value'];
+      $host_info['field'] = $existing->get('parent_field_name')->getValue()[0]['value'];
       $host_info['entity'] = $parent;
     }
     return $this->createParagraph($host_info['field'],$host_info['bundle'],$host_info['entity']);
@@ -778,7 +778,7 @@ class Importer {
         return "shareable";
       }
       $foundValues = array();
-      $targetValues = $paragraph->{$target}->getValue();
+      $targetValues = $paragraph->get($target)->getValue();
       foreach ($chunk as $index => $chunkVal) {
         $found_sub_fields = array();
         $changed = NULL;

@@ -3,6 +3,7 @@
 namespace Drupal\Tests\feeds_para_mapper\Unit;
 
 use Drupal\Core\Field\FieldDefinitionInterface;
+use Drupal\Core\Field\FieldItemList;
 use Drupal\entity_reference_revisions\EntityReferenceRevisionsFieldItemList;
 use Drupal\feeds\Feeds\Target\Text;
 use Drupal\feeds_para_mapper\Importer;
@@ -194,11 +195,16 @@ class TestImporter extends FpmTestBase
   public function testUpdateParagraphs(){
     $this->entityHelper->values = array();
     $method = $this->getMethod(Importer::class,'updateParagraphs');
-    $values = array(array('a'), array('b'), array('c'));
+    $values = array(
+      array(array('value' => 'a')),
+      array(array('value' => 'b')),
+      array(array('value' => 'c')),
+    );
     $paragraphs = $this->entityHelper->paragraphs;
-    $first_par = reset($paragraphs);
-    $args = array(array($first_par->reveal()), $values);
+    $lastPar = end($paragraphs);
+    $args = array(array($lastPar->reveal()), $values);
     $result = $method->invokeArgs($this->importer, $args);
+    self::assertCount(1, $result);
     for ($i = 0; $i < count($result); $i++) {
       self::assertArrayEquals($values[$i], $result[$i]['value']);
       self::assertInstanceOf(Paragraph::class, $result[$i]['paragraph']);
@@ -210,17 +216,26 @@ class TestImporter extends FpmTestBase
    * @covers ::appendParagraphs
    */
   public function testAppendParagraphs(){
-    $this->entityHelper->values = array();
+    $this->entityHelper->values = array(
+      'bundle_two_text' => array(
+        array(
+          'value' => 'a'
+        ),
+      ),
+    );
     $method = $this->getMethod(Importer::class,'appendParagraphs');
-    $values = array(array('a'), array('b'), array('c'));
-    $paragraphs = $this->entityHelper->paragraphs;
-    $paragraphs = array_values($paragraphs);
-    $paragraph = $paragraphs[0]->reveal();
+    $values = array(
+      array(array('value' => 'a')),
+      array(array('value' => 'b')),
+      array(array('value' => 'c')),
+      );
+    $paragraphs = array_values($this->entityHelper->paragraphs);
+    $paragraph = $paragraphs[1]->reveal();
     $paragraph->host_info = array(
-      'field' => 'paragraph_field',
-      'bundle' => 'bundle_one',
-      'entity' => $this->node->reveal(),
-      'type' => 'node',
+      'field' => 'bundle_one_bundle_two',
+      'bundle' => 'bundle_two',
+      'entity' => $paragraphs[0]->reveal(),
+      'type' => 'paragraph',
     );
     $args = array(array($paragraph), $values);
     $result = $method->invokeArgs($this->importer, $args);
@@ -252,5 +267,27 @@ class TestImporter extends FpmTestBase
     // Test with already created parents:
     $result = $method->invokeArgs($this->importer, array($node));
     self::assertNull($result);
+  }
+
+  /**
+   * @covers ::duplicateExisting
+   */
+  public function testDuplicateExisting(){
+    $this->entityHelper->values = array();
+    $method = $this->getMethod(Importer::class,'duplicateExisting');
+    $paragraph = $this->entityHelper->paragraphs[2];
+    $paragraph->isNew()->willReturn(false);
+    $parObject = $paragraph->reveal();
+    $result = $method->invokeArgs($this->importer, array($parObject));
+    $host_info = $result->host_info;
+    $keys = array(
+      'type',
+      'entity',
+      'bundle',
+      'field'
+    );
+    foreach ($keys as $key) {
+      self::assertArrayHasKey($key, $host_info);
+    }
   }
 }

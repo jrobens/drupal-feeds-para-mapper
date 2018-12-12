@@ -143,8 +143,11 @@ class TestMapper extends FpmTestBase
       array(
         'handler_settings' => array(),
       ),
+      array(),
       'paragraph',
-      'bundle_two'
+      'bundle_two',
+      'bundle_one_bundle_two',
+      3
     );
     $path = array(
       array(

@@ -8,7 +8,9 @@ use Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException;
 use Drupal\Component\Plugin\Exception\PluginNotFoundException;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Field\FieldItemList;
 use Drupal\entity_reference_revisions\EntityReferenceRevisionsFieldItemList;
+use Drupal\field\FieldConfigInterface;
 use Drupal\node\Entity\Node;
 use Drupal\paragraphs\Entity\Paragraph;
 use Prophecy\Argument;
@@ -41,21 +43,33 @@ class EntityHelper
    * @var array
    */
   public $values;
+  /**
+   * @var array
+   */
+  public $host_fields_values;
 
   public function __construct(FieldHelper $fieldHelper){
     $this->prophet = new Prophet();
     $this->node = $this->getEntity('node', $fieldHelper->node_bundle);
     $this->paragraphs = array();
+    $this->host_fields_values = array();
     foreach ($fieldHelper->fieldsConfig as $config) {
       $st = $config->settings['handler_settings'];
       if(isset($st['target_bundles'])){
         $this->values[$config->name] = array();
         foreach ($st['target_bundles'] as $target_bundle) {
+          $last = $this->node;
           foreach ($config->paragraph_ids as $paragraph_id) {
-            $this->paragraphs[$paragraph_id] = $this->getEntity('paragraph', $target_bundle);
+            if(isset($config->host_field)){
+              $this->host_fields_values[$config->name] = array(
+                array('value' => $config->host_field)
+              );
+            }
+            $this->paragraphs[$paragraph_id] = $this->getEntity('paragraph', $target_bundle, $config->host_field, $last->reveal());
             $this->values[$config->name][] = array(
               'target_id' => $paragraph_id
             );
+            $last = $this->paragraphs[$paragraph_id];
           }
         }
       }
@@ -69,11 +83,15 @@ class EntityHelper
    *   The entity type.
    * @param string $bundle
    *   The entity bundle.
+   * @param string $host_field
+   *   The host field.
+   * @param mixed $host
+   *   The host entity.
    *
    * @return ObjectProphecy
    *   A mocked entity object.
    */
-  private function getEntity($type, $bundle){
+  private function getEntity($type, $bundle, $host_field = null, $host = null){
     $class = Node::class;
     if($type === 'paragraph'){
       $class = Paragraph::class;
@@ -102,10 +120,16 @@ class EntityHelper
     $entity->getEntityTypeId()->willReturn($type);
     $entity->bundle()->willReturn($bundle);
     $that = $this;
-    $entity->get(Argument::type('string'))->will(function($args) use ($entity, $that){
+    if(isset($host_field)){
+      $entity->getParentEntity()->willReturn($host);
+    }
+    $entity->get(Argument::type('string'))->will(function($args) use ($entity, $host_field, $that){
+      if($args[0] === 'parent_field_name' ){
+        return $that->getFieldItemListMock($host_field,'text');
+      }
       return $that->getFieldItemListMock($args[0]);
     });
-
+    $entity->getType()->willReturn($bundle);
     $entity->getFieldDefinitions()->will(function ($args) use ($that, $type, $bundle){
       return $that->fieldHelper->getFieldDefinitions($type, $bundle);
     });
@@ -115,25 +139,32 @@ class EntityHelper
   /**
    *
    * @param string $field
+   * @param string $type
    *
    * @return EntityReferenceRevisionsFieldItemList
    */
-  private function getFieldItemListMock($field){
-    $that = $this;
-    $fieldItem = $this->prophet->prophesize(EntityReferenceRevisionsFieldItemList::class);
-    $fieldItem->getValue()->will(function($args) use ($that, $field){
-      if(isset($that->values[$field])) {
-        return $that->values[$field];
+  private function getFieldItemListMock($field, $type = "reference"){
+    $class  = EntityReferenceRevisionsFieldItemList::class;
+    $values = &$this->values;
+    if($type !== 'reference'){
+      $class  = FieldItemList::class;
+      $values = &$this->host_fields_values;
+    }
+    $fieldItem = $this->prophet->prophesize($class);
+    $fieldItem->getValue()->will(function($args) use ($field, $values){
+      $result = array();
+      if(isset($values[$field])) {
+        $result = $values[$field];
       }
-      return array();
+      return $result;
     });
-    $fieldItem->appendItem(Argument::any())->will(function($args) use ($that,$field){
-      $values = array();
-      if(isset($that->values[$field])){
-        $values = $that->values[$field];
+    $fieldItem->appendItem(Argument::any())->will(function($args) use ($field, &$values){
+      $v = array();
+      if(isset($values[$field])){
+        $v = $values[$field];
       }
-      $values[] = array('entity' => $args[0]);
-      $that->values[$field] = $values;
+      $v[] = array('entity' => $args[0]);
+      $values[$field] = $v;
       return $this->reveal();
     });
     return $fieldItem->reveal();

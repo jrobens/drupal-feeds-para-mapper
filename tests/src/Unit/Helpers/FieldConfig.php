@@ -39,6 +39,16 @@ class FieldConfig {
   public $host_bundle;
 
   /**
+   * @var string
+   */
+  public $host_field;
+
+  /**
+   * @var int
+   */
+  public $host_id;
+
+  /**
    * @var array
    */
   public $paragraph_ids;
@@ -50,20 +60,24 @@ class FieldConfig {
    * @param int $id
    * @param int $cardinality
    * @param array $settings
+   * @param array $paragraph_ids
    * @param string $host_type
    * @param string $host_bundle
-   * @param array $paragraph_ids
+   * @param string $host_field
+   * @param int $host_id
    */
-  public function __construct($name, $type, $id, $cardinality, array $settings, $host_type, $host_bundle, $paragraph_ids = array())
+  public function __construct($name, $type, $id, $cardinality, array $settings,  $paragraph_ids, $host_type, $host_bundle, $host_field, $host_id)
   {
     $this->name = $name;
     $this->type = $type;
     $this->id = $id;
     $this->cardinality = $cardinality;
     $this->settings = $settings;
+    $this->paragraph_ids = $paragraph_ids;
     $this->host_type = $host_type;
     $this->host_bundle = $host_bundle;
-    $this->paragraph_ids = $paragraph_ids;
+    $this->host_field = $host_field;
+    $this->host_id = $host_id;
   }
 
 

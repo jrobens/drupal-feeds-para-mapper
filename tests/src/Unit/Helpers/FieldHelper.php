@@ -51,9 +51,11 @@ class FieldHelper
             'target_bundles' => array($this->bundles['bundle_one']),
           ),
         ),
+        array(1),
         'node',
         'product',
-        array(1)
+        'paragraph_field',
+        1
       ),
       new FieldConfig(
         'bundle_one_bundle_two',
@@ -65,9 +67,11 @@ class FieldHelper
             'target_bundles' => array($this->bundles['bundle_two']),
           ),
         ),
+        array(2),
         'paragraph',
         'bundle_one',
-        array(2)
+        'bundle_one_bundle_two',
+        2
       ),
       new FieldConfig(
         'bundle_two_text',
@@ -77,10 +81,12 @@ class FieldHelper
         array(
           'handler_settings' => array(),
         ),
+        array(),
         'paragraph',
-        'bundle_two'
+        'bundle_two',
+        'bundle_one_bundle_two',
+        3
       ),
-
     );
     $this->fieldsConfig = $fieldsConfig;
     foreach ($fieldsConfig as $fieldConfig) {
