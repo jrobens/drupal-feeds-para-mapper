@@ -309,6 +309,21 @@ abstract class FpmTestBase extends UnitTestCase
   }
 
   /**
+   * Returns a protected, private property of an object.
+   *
+   * @param mixed $object
+   * @param string $property
+   *
+   * @return mixed
+   */
+  protected function getProperty($object,$property){
+    $ref = new \ReflectionObject($object);
+    $prop = $ref->getProperty($property);
+    $prop->setAccessible(true);
+    return $prop->getValue($object);
+  }
+
+  /**
    *  Generates a mapper object.
    * @return Mapper
    */

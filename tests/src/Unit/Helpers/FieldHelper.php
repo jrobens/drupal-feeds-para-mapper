@@ -61,7 +61,7 @@ class FieldHelper
         'bundle_one_bundle_two',
         'entity_reference_revisions',
         2,
-        1,
+        -1,
         array(
           'handler_settings' => array(
             'target_bundles' => array($this->bundles['bundle_two']),

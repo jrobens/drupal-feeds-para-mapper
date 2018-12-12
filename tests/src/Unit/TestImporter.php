@@ -340,4 +340,71 @@ class TestImporter extends FpmTestBase
       self::assertArrayHasKey($key, $host_info);
     }
   }
+
+  /**
+   * @covers ::shouldCreateNew
+   */
+  public function testShouldCreateNew(){
+    $this->entityHelper->values = array();
+    $method = $this->getMethod(Importer::class,'shouldCreateNew');
+    $paragraph = end($this->entityHelper->paragraphs)->reveal();
+    $parent_values = array(
+      array(
+        'value' => '2',
+      ),
+      array(
+        'value' => '2',
+      ),
+    );
+    $target_values = array(
+      array(
+        'value' => 'a',
+      ),
+      array(
+        'value' => 'b',
+      ),
+      array(
+        'value' => 'c',
+      ),
+    );
+    $args = array(
+      $paragraph,
+      array(
+        array(array('value' => 'a')),
+        array(array('value' => 'b')),
+        array(array('value' => 'c')),
+      ),
+    );
+
+    // Slices: 3
+    // Host entity values: 0
+    // target field values: 0
+    // Max allowed values: 1
+    // Based on this we should not create new entity, instead fill the existing:
+    $result = $method->invokeArgs($this->importer, $args);
+    self::assertFalse($result, 'we should NOT create new paragraph entities');
+
+    $this->entityHelper->values['bundle_one_bundle_two'] = $parent_values;
+    $this->entityHelper->values['bundle_two_text'] = $target_values;
+    $this->updateProperty($this->importer,'configuration', array('max_values' => 4));
+
+    // Slices: 3
+    // Host entity values: 2
+    // target field values: 3
+    // Max allowed values: 4
+    // We should not create entity:
+    $result = $method->invokeArgs($this->importer, $args);
+    self::assertFalse($result, 'we should NOT create new paragraph entities');
+
+    $target_values+= array('value' => 'd');
+    $this->entityHelper->values['bundle_two_text'] = $target_values;
+
+    // Slices: 3
+    // Host entity values: 2
+    // target field values: 4
+    // Max allowed values: 4
+    // We should create another entity:
+    $result = $method->invokeArgs($this->importer, $args);
+    self::assertTrue($result, 'we should create new paragraph entities');
+  }
 }

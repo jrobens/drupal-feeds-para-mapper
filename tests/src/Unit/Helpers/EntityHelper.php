@@ -9,6 +9,7 @@ use Drupal\Component\Plugin\Exception\PluginNotFoundException;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Field\FieldItemList;
+use Drupal\Core\Field\FieldStorageDefinitionInterface;
 use Drupal\entity_reference_revisions\EntityReferenceRevisionsFieldItemList;
 use Drupal\field\FieldConfigInterface;
 use Drupal\node\Entity\Node;
@@ -53,12 +54,12 @@ class EntityHelper
     $this->node = $this->getEntity('node', $fieldHelper->node_bundle);
     $this->paragraphs = array();
     $this->host_fields_values = array();
+    $last = $this->node;
     foreach ($fieldHelper->fieldsConfig as $config) {
       $st = $config->settings['handler_settings'];
       if(isset($st['target_bundles'])){
         $this->values[$config->name] = array();
         foreach ($st['target_bundles'] as $target_bundle) {
-          $last = $this->node;
           foreach ($config->paragraph_ids as $paragraph_id) {
             if(isset($config->host_field)){
               $this->host_fields_values[$config->name] = array(
@@ -123,11 +124,16 @@ class EntityHelper
     if(isset($host_field)){
       $entity->getParentEntity()->willReturn($host);
     }
-    $entity->get(Argument::type('string'))->will(function($args) use ($entity, $host_field, $that){
+    $entity->get(Argument::type('string'))->will(function($args) use ($entity, $host_field, $bundle, $that){
       if($args[0] === 'parent_field_name' ){
         return $that->getFieldItemListMock($host_field,'text');
       }
-      return $that->getFieldItemListMock($args[0]);
+      $fields = $that->fieldHelper->getBundleFields($bundle);
+      $found = array_filter($fields, function ($field) use ($args){
+        $name = $field->reveal()->getName();
+        return  $name === $args[0];
+      })[0];
+      return $that->getFieldItemListMock($args[0],'reference', $found->reveal());
     });
     $entity->getType()->willReturn($bundle);
     $entity->getFieldDefinitions()->will(function ($args) use ($that, $type, $bundle){
@@ -140,10 +146,11 @@ class EntityHelper
    *
    * @param string $field
    * @param string $type
+   * @param mixed $instance
    *
    * @return EntityReferenceRevisionsFieldItemList
    */
-  private function getFieldItemListMock($field, $type = "reference"){
+  private function getFieldItemListMock($field, $type = "reference", $instance = null){
     $class  = EntityReferenceRevisionsFieldItemList::class;
     $values = &$this->values;
     if($type !== 'reference'){
@@ -167,6 +174,7 @@ class EntityHelper
       $values[$field] = $v;
       return $this->reveal();
     });
+    $fieldItem->getFieldDefinition()->willReturn($instance);
     return $fieldItem->reveal();
   }
 

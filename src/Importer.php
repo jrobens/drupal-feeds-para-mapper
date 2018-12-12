@@ -724,7 +724,7 @@ class Importer {
    *   TRUE if we should create new Paragraphs entity.
    */
   private function shouldCreateNew(Paragraph $currentParagraph, array $slices) {
-    $path = $this->mapper->getInfo($this->target,'path');
+    $path = $this->targetInfo->path;
     if (count($path) > 1) {
       $host_field = $path[count($path) -1]['host_field'];
       $host = $currentParagraph->getParentEntity();
@@ -738,12 +738,28 @@ class Importer {
     $host_field_storage = $host->get($host_field)->getFieldDefinition()->getFieldStorageDefinition();
     $allowed = (int) $host_field_storage->getCardinality();
     $skip_check = $allowed === -1;
-    // If the parent cannot hold more than 1 value, we should not:
-    if ($allowed <= 1 && !$skip_check) {
+    // If the parent cannot hold anymore values, we should not:
+    if ($allowed === count($current_values) && !$skip_check) {
       return FALSE;
     }
-    // If values changed, or we have more than existed, we should:
-    if (count($current_values) < count($slices)) {
+    $exceeded = TRUE;
+    if($skip_check){
+      $max = $this->mapper->getMaxValues($this->target, $this->configuration);
+      $allowed = $max;
+      // Compare the child entity values with max values allowed:
+      $target_values = $currentParagraph->get($this->target->getName())->getValue();
+      if(count($target_values)){
+        if(count($target_values) < $max){
+          $exceeded = FALSE;
+        }
+      }
+      else {
+        $exceeded = FALSE;
+      }
+    }
+    // If the parent or the child entity can hold more values (children),
+    // and the child cannot hold values, we should:
+    if (count($current_values) < count($slices) && $allowed > count($current_values) && $exceeded) {
       return TRUE;
     }
     return FALSE;
