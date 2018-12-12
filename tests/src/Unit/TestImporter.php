@@ -290,4 +290,30 @@ class TestImporter extends FpmTestBase
       self::assertArrayHasKey($key, $host_info);
     }
   }
+
+  /**
+   * @covers ::removeExistingParents
+   */
+  public function testRemoveExistingParents(){
+    $this->entityHelper->values = array();
+    $method = $this->getMethod(Importer::class,'removeExistingParents');
+    $path = $this->field->get('target_info')->path;
+    $result = $method->invokeArgs($this->importer, array($path));
+    self::assertArrayHasKey('parents', $result, 'parents key exists');
+    self::assertArrayHasKey('removed', $result, 'removed key exists');
+    self::assertCount(count($path), $result['parents'], 'parents count is correct');
+    self::assertCount(0, $result['removed'], 'removed array is empty');
+    // check that the order of each parent is correct
+    for($i=1; $i < count($result['parents']); $i++){
+      self::assertTrue($result['parents'][$i]['order'] > $result['parents'][$i -1]['order'], 'Parents order is correct');
+    }
+    $this->entityHelper->values['paragraph_field'] = array(
+      array(
+        'entity' => $this->entityHelper->paragraphs[1]
+      )
+    );
+    $result = $method->invokeArgs($this->importer, array($path));
+    self::assertCount(count($path) -1, $result['parents'], 'parents count is correct');
+    self::assertCount(1, $result['removed'], 'removed is not empty');
+  }
 }
