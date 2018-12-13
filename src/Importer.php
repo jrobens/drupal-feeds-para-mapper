@@ -79,7 +79,19 @@ class Importer {
   protected $instance;
   public function __construct(EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $field_manager, Mapper $mapper) {
     $this->language           = LanguageInterface::LANGCODE_DEFAULT;
-    $this->paragraph_storage  = $entity_type_manager->getStorage('paragraph');
+    try {
+      $this->paragraph_storage = $entity_type_manager->getStorage('paragraph');
+    }
+    catch (InvalidPluginDefinitionException $e) {
+      drupal_set_message(t('Failed to initialize importer'), 'error');
+      drupal_set_message($e,'error');
+    }
+    catch (PluginNotFoundException $e) {
+      drupal_set_message($e,'error');
+    }
+    if(!isset($this->paragraph_storage)){
+      return;
+    }
     $this->field_manager      = $field_manager;
     $this->mapper             = $mapper;
   }
@@ -143,154 +155,6 @@ class Importer {
     $this->entity->fpm_targets = $fpm_targets;
   }
 
-  /**
-   * A start point for creating revisions and cleaning up.
-   *
-   * @param EntityInterface $entity
-   */
-  public static function finalize($entity){
-    if(!isset($entity->fpm_targets)){
-      return;
-    }
-    foreach ($entity->fpm_targets as $fieldInstance) {
-      $target_info = $fieldInstance->get('target_info');
-      self::checkUpdates($target_info->paragraphs);
-    }
-    self::cleanUp($entity,$entity->fpm_targets);
-  }
-
-  /**
-   * @param Paragraph[] $updates
-   */
-  public static function checkUpdates(array $updates){
-    $toUpdate = array_filter($updates, function (Paragraph $update){
-      return !$update->isNew();
-    });
-    foreach ($toUpdate as $update) {
-      self::createRevision($update);
-    }
-  }
-
-  /**
-   *  Creates a revision.
-   *
-   * @param Paragraph $paragraph
-   */
-  public static function createRevision($paragraph){
-    $paragraph->setNewRevision(TRUE);
-    $paragraph->isDefaultRevision(TRUE);
-    try {
-      $paragraph->save();
-    } catch (EntityStorageException $e) {
-    }
-    // @see https://www.drupal.org/project/entity_reference_revisions/issues/2984540
-    // until this issue is fixed, we need to manually tell the parent entity to use this revision
-    self::updateParentRevision($paragraph);
-  }
-
-  /**
-   * Updates the parent target's revision id.
-   *
-   * @param Paragraph $paragraph
-   */
-  public static function updateParentRevision($paragraph){
-    $host_field = $paragraph->parent_field_name->getValue()[0]['value'];
-    $revision_id = $paragraph->updateLoadedRevisionId()->getRevisionId();
-    $parent = $paragraph->getParentEntity();
-    $values = $parent->{$host_field}->getValue();
-    foreach ($values as $index => $value) {
-      if(isset($value['target_id']) && $value['target_id'] === $paragraph->id()){
-        $value['target_revision_id'] = $revision_id;
-        $parent->{$host_field}->set($index,$value);
-      }
-    }
-    try {
-      $parent->save();
-    } catch (EntityStorageException $e) {
-      drupal_set_message(t("Failed to update host entity"), 'error');
-      drupal_set_message($e, 'error');
-    }
-  }
-
-
-  /**
-   *  Cleans up the entity and its paragraphs before saving the update.
-   *
-   * @param EntityInterface $entity
-   * @param FieldConfigInterface[] $fields
-   */
-  public static function cleanUp($entity, array $fields){
-    try {
-      $storage = \Drupal::entityTypeManager()->getStorage('paragraph');
-    }
-    catch (InvalidPluginDefinitionException $e) {
-      drupal_set_message(t('Failed to clean up entities'), 'error');
-      drupal_set_message($e,'error');
-    }
-    catch (PluginNotFoundException $e) {
-      drupal_set_message($e,'error');
-    }
-    if(!isset($storage)){
-      return;
-    }
-    // Load all attached entities for the target field:
-    $loaded = array();
-    foreach ($fields as $field_name => $field) {
-      $loaded[$field_name] = self::loadTarget($entity,$field,$storage);
-    }
-
-    // Check for any unused entities:
-    foreach ($loaded as $field_name => $attached) {
-      $targetInfo = $fields[$field_name]->get('target_info');
-      $used_entities = $targetInfo->paragraphs;
-      if(count($attached) > count($used_entities)){
-        self::removeUnused($used_entities,$attached, $fields[$field_name]);
-      }
-    }
-  }
-
-  /**
-   * Removes any unused entities.
-   *
-   * @param Paragraph[] $used_entities
-   * @param Paragraph[] $attached
-   * @param FieldConfigInterface $field
-   */
-  private static function removeUnused($used_entities, $attached, $field){
-    // Collect the entities that we should remove:
-    $toRemove = array();
-    for ($i = 0; $i < count($attached); $i++){
-      if(!isset($used_entities[$i])){
-        $toRemove[$i] = $attached[$i];
-      }
-    }
-    // Check that fields in common are not using any of the entities we intend to remove:
-    $targetInfo = $field->get('target_info');
-    $in_common_fields = $targetInfo->in_common;
-    foreach ($in_common_fields as $in_common_field) {
-      foreach ($toRemove as $key => $paragraph){
-        $values = $paragraph->get($in_common_field['name'])->getValue();
-        if(count($values)){
-          unset($toRemove[$key]);
-        }
-      }
-    }
-    $parent = $attached[0]->getParentEntity();
-    $parent_field = $attached[0]->get('parent_field_name')->getValue()[0]['value'];
-    $removed = 0;
-    foreach ($toRemove as $paragraph) {
-      $parent_values = $parent->get($parent_field)->getValue();
-      foreach ($parent_values as $index => $parent_value) {
-        if(isset($parent_value['target_id']) && $parent_value['target_id'] === $paragraph->id()){
-          $parent->get($parent_field)->removeItem($index);
-          $removed++;
-        }
-      }
-    }
-    if($removed > 0){
-      self::createRevision($parent);
-    }
-  }
   private function explode(){
     $values = array();
     $final = [$this->values];
@@ -333,7 +197,7 @@ class Importer {
     }
     else {
       // Load existing paragraph:
-      $attached = $this->loadTarget($this->entity,$this->target,$this->paragraph_storage);
+      $attached = $this->loadTarget($this->entity,$this->target);
     }
     if (count($attached)) {
       // Check if we should create new Paragraphs entities:
@@ -417,7 +281,6 @@ class Importer {
    *   The host entity.
    * @param FieldConfigInterface $targetInstance
    *   The target field instance.
-   * @param EntityStorageInterface $storage
    *   The entity storage.
    * @param array $result
    *   The previously loaded paragraphs to append to.
@@ -425,7 +288,7 @@ class Importer {
    * @return Paragraph[]
    *   The loaded Paragraphs entities.
    */
-  private static function loadTarget($entity, $targetInstance, $storage,  array $result = array()){
+  public function loadTarget($entity, $targetInstance,  array $result = array()){
     $targetInfo = $targetInstance->get('target_info');
     $path = $targetInfo->path;
     $target = $targetInstance->getName();
@@ -441,9 +304,9 @@ class Importer {
           if($exist = $entity->hasField($host_info['host_field'])){
             $values = $entity->get($host_info['host_field'])->getValue();
             foreach ($values as $value) {
-              $paragraph = $storage->load($value['target_id']);
+              $paragraph = $this->paragraph_storage->load($value['target_id']);
               if($paragraph){
-                $result = self::loadTarget($paragraph, $targetInstance, $storage, $result);
+                $result = $this->loadTarget($paragraph, $targetInstance, $result);
               }
             }
           }
@@ -453,7 +316,7 @@ class Importer {
     elseif ($entity->hasField($path[0]['host_field'])) {
       $values = $entity->get($path[0]['host_field'])->getValue();
       foreach ($values as $value) {
-        $paragraph = $storage->load($value['target_id']);
+        $paragraph = $this->paragraph_storage->load($value['target_id']);
         if ($paragraph) {
           $result[] = $paragraph;
         }

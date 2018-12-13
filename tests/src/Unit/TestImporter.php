@@ -204,9 +204,7 @@ class TestImporter extends FpmTestBase
    * @covers ::loadTarget
    */
   public function testLoadTarget(){
-    $method = $this->getMethod(Importer::class,'loadTarget')->getClosure();
-    $storage = $this->entityHelper->getEntityTypeManagerMock()->getStorage('paragraph');
-    $result = $method($this->node->reveal(), $this->field, $storage);
+    $result = $this->importer->loadTarget($this->node->reveal(), $this->field);
     self::assertNotEmpty($result,"nested entities loaded");
     // Test with non-nested field:
     $info = $this->field->get('target_info');
@@ -219,7 +217,7 @@ class TestImporter extends FpmTestBase
       ),
     );
     $this->field->set('target_info', $info);
-    $result = $method($this->node->reveal(), $this->field, $storage);
+    $result = $this->importer->loadTarget($this->node->reveal(), $this->field);
     self::assertNotEmpty($result,"flat entity loaded");
   }
 
