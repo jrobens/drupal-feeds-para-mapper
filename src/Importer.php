@@ -776,7 +776,7 @@ class Importer {
    * @return array
    *   Information about each value state.
    */
-  function checkValuesChanges(array $slices, array $entities) {
+  private function checkValuesChanges(array $slices, array $entities) {
     $target = $this->target->getName();
     $lang = $this->language;
     $getParagraph = function ($index) use ($entities) {
@@ -805,9 +805,13 @@ class Importer {
               $found_sub_fields[] = $sub_field;
               $changed = $targetValue[$sub_field] !== $sub_field_value;
             }
+            else {
+              $changed = TRUE;
+              break;
+            }
           }
         }
-        if(count($found_sub_fields) === count(array_keys($chunkVal))){
+        if(count($found_sub_fields) <= count(array_keys($chunkVal))){
           $value = [
             "chunk_value" => $chunkVal,
             'state' => $changed ? "changed": "unchanged",
@@ -821,6 +825,9 @@ class Importer {
           $changed = TRUE;
           break;
         }
+      }
+      if(!count($targetValues)){
+        $changed = TRUE;
       }
       $state = $changed ? "changed" : "unchanged";
       return $state;

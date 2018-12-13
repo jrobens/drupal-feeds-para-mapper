@@ -407,4 +407,43 @@ class TestImporter extends FpmTestBase
     $result = $method->invokeArgs($this->importer, $args);
     self::assertTrue($result, 'we should create new paragraph entities');
   }
+
+  /**
+   * @covers ::checkValuesChanges
+   */
+  public function testCheckValuesChanges(){
+    $this->entityHelper->values = array();
+    $method = $this->getMethod(Importer::class,'checkValuesChanges');
+    $paragraph = end($this->entityHelper->paragraphs)->reveal();
+    $args = array(
+      array(
+        array(array('value' => 'a')),
+        array(array('value' => 'b')),
+        array(array('value' => 'c')),
+      ),
+      array($paragraph)
+    );
+    $target_values = array(
+      array(
+        'value' => 'a',
+      ),
+      array(
+        'value' => 'b',
+      ),
+      array(
+        'value' => 'c',
+      ),
+    );
+    $this->entityHelper->values['bundle_two_text'] = $target_values;
+    $result = $method->invokeArgs($this->importer, $args);
+    self::assertCount(3, $result);
+    self::assertTrue($result[0]['state'] === 'unchanged');
+    $args[0][0][0]['value'] = "d";
+    $result = $method->invokeArgs($this->importer, $args);
+    self::assertTrue($result[0]['state'] === 'changed');
+    $args[0][0][0]['value'] = "a";
+    $args[0][0][0]['sub_field'] = "d";
+    $result = $method->invokeArgs($this->importer, $args);
+    self::assertTrue($result[0]['state'] === 'changed');
+  }
 }
