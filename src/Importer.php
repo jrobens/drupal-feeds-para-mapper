@@ -362,7 +362,7 @@ class Importer {
    * @return array
    *   The updated entities.
    */
-  function updateParagraphs($entities, array $slices) {
+  private function updateParagraphs($entities, array $slices) {
     $items = array();
     $slices = $this->checkValuesChanges($slices, $entities);
     for ($i = 0; $i < count($slices); $i++) {
@@ -397,7 +397,7 @@ class Importer {
    * @return array
    *   The newly created and updated entities.
    */
-  function appendParagraphs(array $entities, array $slices) {
+  private function appendParagraphs(array $entities, array $slices) {
     $items = array();
     $slices = $this->checkValuesChanges($slices, $entities);
     for ($i = 0; $i < count($slices); $i++) {
