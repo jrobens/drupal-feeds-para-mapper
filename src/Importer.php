@@ -6,7 +6,6 @@ use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Language\LanguageInterface;
-use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\feeds\FeedInterface;
 use Drupal\feeds\Plugin\Type\Target\FieldTargetBase;
 use Drupal\feeds_para_mapper\Utility\TargetInfo;
@@ -16,7 +15,6 @@ use Drupal\paragraphs\Entity\Paragraph;
 
 class Importer {
 
-  use StringTranslationTrait;
   /**
    * @var FeedInterface
    */

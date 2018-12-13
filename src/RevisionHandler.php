@@ -6,17 +6,27 @@ namespace Drupal\feeds_para_mapper;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityStorageException;
 use Drupal\Core\Entity\EntityStorageInterface;
+use Drupal\Core\Messenger\MessengerInterface;
+use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\field\FieldConfigInterface;
 use Drupal\paragraphs\Entity\Paragraph;
 
 class RevisionHandler
 {
+  use StringTranslationTrait;
+
   /**
    * The paragraph storage.
    *
    * @var EntityStorageInterface
    */
   protected $paragraph_storage;
+
+  /**
+   * @var MessengerInterface
+   *   The messenger service.
+   */
+  private $messenger;
 
   /**
    * @var Importer
@@ -33,11 +43,14 @@ class RevisionHandler
   /**
    * RevisionHandler constructor.
    *
+   * @param MessengerInterface $messenger
+   *    The entity importer service.
    * @param Importer $importer
    *    The entity importer service.
    */
-  public function __construct(Importer $importer)
+  public function __construct(MessengerInterface $messenger, Importer $importer)
   {
+    $this->messenger;
     $this->importer = $importer;
   }
 
@@ -106,8 +119,8 @@ class RevisionHandler
     try {
       $parent->save();
     } catch (EntityStorageException $e) {
-      drupal_set_message(t("Failed to update host entity"), 'error');
-      drupal_set_message($e, 'error');
+      $this->messenger->addError($this->t("Failed to update host entity"));
+      $this->messenger->addError($e);
     }
   }
 
