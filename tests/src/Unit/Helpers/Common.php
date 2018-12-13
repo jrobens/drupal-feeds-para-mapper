@@ -64,10 +64,10 @@ trait Common
     $text->submitConfigurationForm(Argument::any(),Argument::any())
       ->willReturn(null);
     $text->getSummary()->willReturn($translation->translate("test summary"));
-    $text->setTarget(Argument::any(), Argument::any(), Argument::any(), Argument::any())->will(function($args){
+    $that = $this;
+    $text->setTarget(Argument::any(), Argument::any(), Argument::any(), Argument::any())->will(function($args) use ($that){
       // @todo: maybe attach the value here
-      $stop = null;
-      return null;
+      $that->entityHelper->values[$args[2]] = $args[3];
     });
     return $text;
   }

@@ -5,6 +5,7 @@ namespace Drupal\Tests\feeds_para_mapper\Unit;
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemList;
 use Drupal\entity_reference_revisions\EntityReferenceRevisionsFieldItemList;
+use Drupal\feeds\FeedInterface;
 use Drupal\feeds\Feeds\Target\Text;
 use Drupal\feeds_para_mapper\Importer;
 use Drupal\feeds_para_mapper\Utility\TargetInfo;
@@ -84,9 +85,32 @@ class TestImporter extends FpmTestBase
     );
     $instance = $this->wrapperTarget->createTargetInstance();
     $this->importer->import($feed, $entity->reveal(), $this->field, $config, $values, $instance);
-    $this->instanceMock
-      ->setTarget(Argument::any(),Argument::any(),Argument::any(),Argument::any())
-      ->shouldHaveBeenCalled();
+    $this->instanceMock->setTarget(
+      Argument::type(FeedInterface::class),
+      Argument::type(Paragraph::class),
+      Argument::type('string'),
+      Argument::type('array')
+    )->shouldHaveBeenCalled();
+  }
+
+  /**
+   * @covers ::setValue
+   */
+  public function testSetValue(){
+    $this->entityHelper->values = array();
+    $method = $this->getMethod(Importer::class,'setValue');
+    $paragraph = end($this->entityHelper->paragraphs);
+    $value = array('value' => "a");
+    $args = array($paragraph->reveal(), $value);
+    $method->invokeArgs($this->importer, $args);
+    $this->instanceMock->setTarget(
+      Argument::type(FeedInterface::class),
+      Argument::type(Paragraph::class),
+      Argument::type('string'),
+      Argument::type('array')
+    )->shouldHaveBeenCalled();
+    $appendedValue = $this->entityHelper->values['bundle_two_text'];
+    self::assertSame($value, $appendedValue, "The value has been set");
   }
 
   /**
