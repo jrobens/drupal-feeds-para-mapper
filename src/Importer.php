@@ -10,6 +10,7 @@ use Drupal\Core\Entity\EntityStorageException;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Language\LanguageInterface;
+use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\feeds\FeedInterface;
 use Drupal\feeds\Plugin\Type\Target\FieldTargetBase;
 use Drupal\feeds\Plugin\Type\Target\TargetBase;
@@ -54,7 +55,10 @@ class Importer {
    * @var string
    */
   protected $language;
-
+  /**
+   * @var MessengerInterface
+   */
+  public $messenger;
   /**
    * The paragraph storage.
    *
@@ -77,23 +81,24 @@ class Importer {
    * @var FieldTargetBase
    */
   protected $instance;
-  public function __construct(EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $field_manager, Mapper $mapper) {
-    $this->language           = LanguageInterface::LANGCODE_DEFAULT;
+  public function __construct(MessengerInterface $messenger, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $field_manager, Mapper $mapper) {
+    $this->language       = LanguageInterface::LANGCODE_DEFAULT;
+    $this->messenger      = $messenger;
+    $this->field_manager  = $field_manager;
+    $this->mapper         = $mapper;
     try {
       $this->paragraph_storage = $entity_type_manager->getStorage('paragraph');
     }
     catch (InvalidPluginDefinitionException $e) {
-      drupal_set_message(t('Failed to initialize importer'), 'error');
-      drupal_set_message($e,'error');
+      $this->messenger->addError(t('Failed to initialize importer'));
+      $this->messenger->addError($e);
     }
     catch (PluginNotFoundException $e) {
-      drupal_set_message($e,'error');
+      $this->messenger->addError($e);
     }
     if(!isset($this->paragraph_storage)){
-      return;
+      throw new \Exception("Entity storage is not defined");
     }
-    $this->field_manager      = $field_manager;
-    $this->mapper             = $mapper;
   }
 
   public function import(FeedInterface $feed, EntityInterface $entity, FieldConfigInterface $target, array $configuration, array $values, FieldTargetBase $instance){

@@ -51,7 +51,10 @@ class TestImporter extends FpmTestBase
     $entity_manager = $this->entityHelper->getEntityTypeManagerMock();
     $field_manager = $this->fieldHelper->getEntityFieldManagerMock();
     $mapper = $this->getMapperObject();
-    $this->importer = new Importer($entity_manager, $field_manager, $mapper);
+    try {
+      $this->importer = new Importer($this->messenger->reveal(), $entity_manager, $field_manager, $mapper);
+    } catch (\Exception $e) {
+    }
     $targets = $mapper->getTargets('node', 'products');
     $this->field = $targets[0];
     $this->initImporter();

@@ -13,7 +13,6 @@ use Drupal\feeds\Plugin\Type\Target\FieldTargetBase;
 use Drupal\feeds_para_mapper\Feeds\Target\WrapperTarget;
 use Drupal\feeds_para_mapper\Mapper;
 use Drupal\feeds_para_mapper\Utility\TargetInfo;
-use Drupal\node\Entity\Node;
 use Drupal\Tests\feeds_para_mapper\Unit\Helpers\EntityHelper;
 use Drupal\Tests\feeds_para_mapper\Unit\Helpers\FieldHelper;
 use Drupal\Tests\UnitTestCase;
@@ -87,6 +86,12 @@ abstract class FpmTestBase extends UnitTestCase
   protected $target;
 
   /**
+   * The messenger mock
+   *
+   * @var ObjectProphecy
+   */
+  protected $messenger;
+  /**
    * @inheritdoc
    */
   protected function setUp()
@@ -107,6 +112,7 @@ abstract class FpmTestBase extends UnitTestCase
     }
     $this->services = $services;
     $this->addServices($this->services);
+    $this->messenger = $this->getMessengerMock();
     $this->initWrapper();
     parent::setUp();
   }
@@ -161,8 +167,7 @@ abstract class FpmTestBase extends UnitTestCase
     $this->target = $target->reveal();
     $plugin_manager = $this->getPluginManagerMock();
     $mapper = $this->getMapperObject();
-    $messenger = $this->getMessengerMock();
-    $wrapperTarget = new WrapperTarget($configuration,$id, $plugin_definition,$messenger, $plugin_manager, $mapper);
+    $wrapperTarget = new WrapperTarget($configuration,$id, $plugin_definition, $this->messenger->reveal(), $plugin_manager, $mapper);
     $this->wrapperTarget = $wrapperTarget;
   }
 
@@ -173,7 +178,8 @@ abstract class FpmTestBase extends UnitTestCase
   private function getMessengerMock(){
     $messenger = $this->prophesize(MessengerInterface::class);
     $messenger->addWarning(Argument::any());
-    return $messenger->reveal();
+    $messenger->addError(Argument::any());
+    return $messenger;
   }
 
   /**
