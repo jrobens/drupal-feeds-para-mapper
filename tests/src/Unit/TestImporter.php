@@ -9,6 +9,8 @@ use Drupal\feeds\FeedInterface;
 use Drupal\feeds\Feeds\Target\Text;
 use Drupal\feeds_para_mapper\Importer;
 use Drupal\feeds_para_mapper\Utility\TargetInfo;
+use Drupal\field\Entity\FieldConfig;
+use Drupal\field\FieldConfigInterface;
 use Drupal\paragraphs\Entity\Paragraph;
 use Drupal\Tests\feeds_para_mapper\Unit\Helpers\Common;
 use Prophecy\Argument;
@@ -113,6 +115,30 @@ class TestImporter extends FpmTestBase
     self::assertSame($value, $appendedValue, "The value has been set");
   }
 
+  /**
+   * @covers ::appendToUpdate
+   */
+  public function testAppendToUpdate(){
+    // Tests adding update
+    $this->entityHelper->values = array();
+    $method = $this->getMethod(Importer::class,'appendToUpdate');
+    $paragraph = end($this->entityHelper->paragraphs);
+    $args = array($paragraph->reveal());
+    $method->invokeArgs($this->importer, $args);
+    $target = $this->getProperty($this->importer,'target');
+    $paragraphs = $target->target_info->paragraphs;
+    self::assertCount(1, $paragraphs,'the target info contains 1 paragraph to update');
+    $entity = $this->getProperty($this->importer,'entity');
+    $fpm_targets = $entity->fpm_targets;
+    self::assertArrayHasKey('bundle_two_text', $fpm_targets, 'bundle_two_text exists in the updates list');
+    $toUpdate = $fpm_targets['bundle_two_text'];
+    self::assertInstanceOf(FieldConfigInterface::class, $toUpdate, 'bundle_two_text is FieldConfigInterface');
+    // Test appending to an exists updates:
+    $method->invokeArgs($this->importer, $args);
+    $entity = $this->getProperty($this->importer,'entity');
+    $paragraphs = $entity->fpm_targets['bundle_two_text']->target_info->paragraphs;
+    self::assertCount(2, $paragraphs, 'Another paragraph is added for update');
+  }
   /**
    * @covers ::initHostParagraphs
    */
