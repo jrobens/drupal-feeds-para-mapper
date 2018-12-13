@@ -107,7 +107,7 @@ class TestWrapperTarget extends FpmTestBase {
   public function testGetSummary(){
     $res = $this->wrapperTarget->getSummary();
     $res = $res->getUntranslatedString();
-    $expected = "test summary<br>Maximum values: 1";
+    $expected = "test summary<br>Maximum values: -1";
     $this->assertSame($res, $expected, "The target summary exists");
   }
   /**

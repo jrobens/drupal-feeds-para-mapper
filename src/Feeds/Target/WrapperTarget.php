@@ -194,7 +194,10 @@ class WrapperTarget extends FieldTargetBase implements ConfigurableTargetInterfa
   public function getSummary()
   {
     $mapper = $this->getMapper();
-    $sum = $this->targetInstance->getSummary();
+    $sum = null;
+    if ($this->targetInstance instanceof ConfigurableTargetInterface) {
+      $sum = $this->targetInstance->getSummary();
+    }
     $has_settings = $mapper->getInfo($this->field, 'has_settings');
     $final_str = $sum;
     if ($has_settings) {
