@@ -2,6 +2,9 @@
 
 namespace Drupal\Tests\feeds_para_mapper\Unit;
 
+use Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException;
+use Drupal\Core\Entity\Entity;
+use Drupal\Core\Entity\EntityType;
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemList;
 use Drupal\entity_reference_revisions\EntityReferenceRevisionsFieldItemList;
@@ -11,9 +14,11 @@ use Drupal\feeds_para_mapper\Importer;
 use Drupal\feeds_para_mapper\Utility\TargetInfo;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\FieldConfigInterface;
+use Drupal\node\Entity\Node;
 use Drupal\paragraphs\Entity\Paragraph;
 use Drupal\Tests\feeds_para_mapper\Unit\Helpers\Common;
 use Prophecy\Argument;
+use Prophecy\Prophecy\MethodProphecy;
 
 /**
  * @group Feeds Paragraphs
@@ -48,11 +53,11 @@ class TestImporter extends FpmTestBase
     $this->type  = "text";
     parent::setUp();
     $this->addServices($this->services);
-    $entity_manager = $this->entityHelper->getEntityTypeManagerMock();
+    $entity_manager = $this->entityHelper->getEntityTypeManagerMock()->reveal();
     $field_manager = $this->fieldHelper->getEntityFieldManagerMock();
     $mapper = $this->getMapperObject();
     try {
-      $this->importer = new Importer($this->messenger->reveal(), $entity_manager, $field_manager, $mapper);
+      $this->importer = new Importer($entity_manager, $field_manager, $mapper);
     } catch (\Exception $e) {
     }
     $targets = $mapper->getTargets('node', 'products');
@@ -72,6 +77,32 @@ class TestImporter extends FpmTestBase
     foreach ($propsValues as $prop => $value) {
       $this->updateProperty($this->importer,$prop, $value);
     }
+  }
+
+  /**
+   * @covers ::__construct
+   */
+  public function testConstruct(){
+    $entity_manager = $this->entityHelper->getEntityTypeManagerMock();
+    $field_manager = $this->fieldHelper->getEntityFieldManagerMock();
+    $mapper = $this->getMapperObject();
+    // Get mock, without the constructor being called
+    $mock = $this->getMockBuilder(Importer::class)
+      ->disableOriginalConstructor()
+      ->getMock();
+    $reflectedClass = new \ReflectionClass(Importer::class);
+    $constructor = $reflectedClass->getConstructor();
+    // Force the constructor to throw error:
+    $entity_manager->getStorage('paragraph')->willThrow(InvalidPluginDefinitionException::class);
+    // now call the constructor
+    $exception = null;
+    try{
+      $constructor->invoke($mock, $entity_manager->reveal(), $field_manager, $mapper);
+    }catch (\Exception $e){
+      $exception = $e;
+    }
+    $entity_manager->getStorage('paragraph')->shouldHaveBeenCalled();
+    self::assertInstanceOf(InvalidPluginDefinitionException::class, $exception);
   }
   /**
    * @covers ::import

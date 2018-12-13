@@ -1,19 +1,14 @@
 <?php
 
 namespace Drupal\feeds_para_mapper;
-use Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException;
-use Drupal\Component\Plugin\Exception\PluginNotFoundException;
 use Drupal\Core\Entity\ContentEntityInterface;
-use Drupal\Core\Entity\Entity;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
-use Drupal\Core\Entity\EntityStorageException;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Language\LanguageInterface;
-use Drupal\Core\Messenger\MessengerInterface;
+use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\feeds\FeedInterface;
 use Drupal\feeds\Plugin\Type\Target\FieldTargetBase;
-use Drupal\feeds\Plugin\Type\Target\TargetBase;
 use Drupal\feeds_para_mapper\Utility\TargetInfo;
 use Drupal\field\FieldConfigInterface;
 use Drupal\Core\Entity\EntityInterface;
@@ -21,6 +16,7 @@ use Drupal\paragraphs\Entity\Paragraph;
 
 class Importer {
 
+  use StringTranslationTrait;
   /**
    * @var FeedInterface
    */
@@ -55,10 +51,7 @@ class Importer {
    * @var string
    */
   protected $language;
-  /**
-   * @var MessengerInterface
-   */
-  public $messenger;
+
   /**
    * The paragraph storage.
    *
@@ -81,23 +74,15 @@ class Importer {
    * @var FieldTargetBase
    */
   protected $instance;
-  public function __construct(MessengerInterface $messenger, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $field_manager, Mapper $mapper) {
+  public function __construct(EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $field_manager, Mapper $mapper) {
     $this->language       = LanguageInterface::LANGCODE_DEFAULT;
-    $this->messenger      = $messenger;
     $this->field_manager  = $field_manager;
     $this->mapper         = $mapper;
     try {
       $this->paragraph_storage = $entity_type_manager->getStorage('paragraph');
     }
-    catch (InvalidPluginDefinitionException $e) {
-      $this->messenger->addError(t('Failed to initialize importer'));
-      $this->messenger->addError($e);
-    }
-    catch (PluginNotFoundException $e) {
-      $this->messenger->addError($e);
-    }
-    if(!isset($this->paragraph_storage)){
-      throw new \Exception("Entity storage is not defined");
+    catch (\Exception $e) {
+      throw $e;
     }
   }
 

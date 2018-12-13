@@ -190,7 +190,7 @@ class EntityHelper
   }
   /** Creates entity manager instance.
    *
-   * @return EntityTypeManagerInterface
+   * @return ObjectProphecy
    */
   public function getEntityTypeManagerMock(){
     $manager = $this->prophet->prophesize('Drupal\Core\Entity\EntityTypeManagerInterface');
@@ -200,7 +200,7 @@ class EntityHelper
     } catch (InvalidPluginDefinitionException $e) {
     } catch (PluginNotFoundException $e) {
     }
-    return $manager->reveal();
+    return $manager;
   }
 
   /**

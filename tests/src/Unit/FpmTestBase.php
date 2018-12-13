@@ -102,7 +102,7 @@ abstract class FpmTestBase extends UnitTestCase
     $this->node = $this->entityHelper->node;
     $services = array(
       'feeds_para_mapper.mapper' => $this->getMapperObject(),
-      'entity_type.manager' => $this->entityHelper->getEntityTypeManagerMock(),
+      'entity_type.manager' => $this->entityHelper->getEntityTypeManagerMock()->reveal(),
       'entity_field.manager' => $this->fieldHelper->getEntityFieldManagerMock(),
       'string_translation' => $this->getStringTranslationStub(),
     );
