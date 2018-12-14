@@ -145,10 +145,9 @@ class RevisionHandler
 
     // Check for any unused entities:
     foreach ($loaded as $field_name => $attached) {
-      $targetInfo = $fields[$field_name]->get('target_info');
-      $used_entities = $targetInfo->paragraphs;
+      $used_entities = $fields[$field_name]->get('target_info')->paragraphs;
       if(count($attached) > count($used_entities)){
-        $this->removeUnused($used_entities,$attached, $fields[$field_name]);
+        $this->removeUnused($used_entities, $attached, $fields[$field_name]);
       }
     }
   }

@@ -303,15 +303,20 @@ abstract class FpmTestBase extends UnitTestCase
   /**
    * Updates a protected, private property of an object.
    *
+   * @param string $class
    * @param mixed $object
    * @param string $property
    * @param mixed $value
    */
-  protected function updateProperty($object,$property,$value){
-    $ref = new \ReflectionObject($object);
-    $prop = $ref->getProperty($property);
-    $prop->setAccessible(true);
-    $prop->setValue($object, $value);
+  protected function updateProperty($class, &$object,$property,$value){
+    try {
+      $ref = new \ReflectionClass($class);
+      $prop = $ref->getProperty($property);
+      $prop->setAccessible(true);
+      $prop->setValue($object, $value);
+    } catch (\ReflectionException $e) {
+    }
+
   }
 
   /**

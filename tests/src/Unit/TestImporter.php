@@ -68,7 +68,7 @@ class TestImporter extends FpmTestBase
       'instance'      => $this->wrapperTarget->createTargetInstance(),
     );
     foreach ($propsValues as $prop => $value) {
-      $this->updateProperty($this->importer,$prop, $value);
+      $this->updateProperty(Importer::class, $this->importer,$prop, $value);
     }
   }
 
@@ -461,7 +461,7 @@ class TestImporter extends FpmTestBase
 
     $this->entityHelper->values['bundle_one_bundle_two'] = $parent_values;
     $this->entityHelper->values['bundle_two_text'] = $target_values;
-    $this->updateProperty($this->importer,'configuration', array('max_values' => 4));
+    $this->updateProperty(Importer::class,$this->importer,'configuration', array('max_values' => 4));
 
     // Slices: 3
     // Host entity values: 2

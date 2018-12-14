@@ -1,9 +1,11 @@
 <?php
 namespace Drupal\Tests\feeds_para_mapper\Unit;
 
+use Drupal\Core\Entity\EntityInterface;
 use Drupal\feeds\Feeds\Target\Text;
 use Drupal\feeds_para_mapper\Importer;
 use Drupal\feeds_para_mapper\RevisionHandler;
+use Drupal\field\FieldConfigInterface;
 use Drupal\paragraphs\Entity\Paragraph;
 use Drupal\Tests\feeds_para_mapper\Unit\Helpers\Common;
 use Prophecy\Argument;
@@ -141,5 +143,38 @@ class TestRevisionHandler extends FpmTestBase
     $value = $frst->reveal()->get($parent)->getValue()[0];
     self::assertArrayHasKey('target_revision_id', $value);
     self::assertSame(2, $value['target_revision_id']);
+  }
+
+  /**
+   * @covers ::cleanUp
+   */
+  public function testCleanUp(){
+    $paragraphs = $this->entityHelper->paragraphs;
+    $paragraph = $paragraphs[2];
+    // Mock RevisionHandler:
+    $revHandler = $this->getMockBuilder(RevisionHandler::class)
+      ->disableOriginalConstructor()
+      ->setMethods(array('removeUnused'))->getMock();
+    $arr = $this->isType('array');
+    $revHandler->expects($this->atLeastOnce())
+      ->method('removeUnused')
+      ->with($arr, $arr, $this->isInstanceOf(FieldConfigInterface::class));
+    // Mock Importer:
+    $importer = $this->getMockBuilder(Importer::class)
+      ->disableOriginalConstructor()
+      ->getMock();
+    $importer->expects($this->atLeastOnce())
+      ->method('loadTarget')
+      ->with($this->isInstanceOf(EntityInterface::class), $this->isInstanceOf(FieldConfigInterface::class))
+      ->willReturn(array($paragraph->reveal(),$paragraph->reveal()));
+    $this->updateProperty(RevisionHandler::class, $revHandler, 'importer', $importer);
+    $this->updateProperty(RevisionHandler::class, $revHandler, 'entity', $this->node->reveal());
+    $field = end($this->fieldHelper->fields)->reveal();
+    $info = $this->getTargetInfo();
+    $info->paragraphs = array($paragraph->reveal());
+    $field->set('target_info', $info);
+    // And call the method:
+    $method = $this->getMethod($revHandler, 'cleanUp');
+    $method->invoke($revHandler, array($field));
   }
 }
