@@ -96,4 +96,18 @@ class TestRevisionHandler extends FpmTestBase
     $revHandler->expects($this->atLeastOnce())->method('cleanUp');
     $revHandler->handle($node);
   }
+
+  /**
+   * @covers ::checkUpdates
+   */
+  public function testCheckUpdates(){
+    $revHandler = $this->getMockBuilder(RevisionHandler::class)
+      ->disableOriginalConstructor()
+      ->setMethods(['createRevision'])->getMock();
+    $revHandler->expects($this->atLeastOnce())->method('createRevision');
+    $method = $this->getMethod($revHandler,'checkUpdates');
+    $paragraph = end($this->entityHelper->paragraphs);
+    $paragraph->isNew()->willReturn(false);
+    $method->invokeArgs($revHandler, array(array($paragraph->reveal())));
+  }
 }
