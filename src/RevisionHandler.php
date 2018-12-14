@@ -85,12 +85,14 @@ class RevisionHandler
    *
    * @param Paragraph $paragraph
    */
-  protected function createRevision($paragraph){
+  protected function createRevision(Paragraph $paragraph){
     $paragraph->setNewRevision(TRUE);
     $paragraph->isDefaultRevision(TRUE);
     try {
       $paragraph->save();
     } catch (EntityStorageException $e) {
+      $this->messenger->addError($this->t("Failed to create revision"));
+      $this->messenger->addError($e);
     }
     // @see https://www.drupal.org/project/entity_reference_revisions/issues/2984540
     // until this issue is fixed, we need to manually tell the parent entity to use this revision

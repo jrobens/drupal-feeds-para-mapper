@@ -4,7 +4,9 @@ namespace Drupal\Tests\feeds_para_mapper\Unit;
 use Drupal\feeds\Feeds\Target\Text;
 use Drupal\feeds_para_mapper\Importer;
 use Drupal\feeds_para_mapper\RevisionHandler;
+use Drupal\paragraphs\Entity\Paragraph;
 use Drupal\Tests\feeds_para_mapper\Unit\Helpers\Common;
+use Prophecy\Argument;
 
 /**
  * @group Feeds Paragraphs
@@ -109,5 +111,23 @@ class TestRevisionHandler extends FpmTestBase
     $paragraph = end($this->entityHelper->paragraphs);
     $paragraph->isNew()->willReturn(false);
     $method->invokeArgs($revHandler, array(array($paragraph->reveal())));
+  }
+
+  /**
+   * @covers ::createRevision
+   */
+  public function testCreateRevision(){
+    $revHandler = $this->getMockBuilder(RevisionHandler::class)
+      ->disableOriginalConstructor()
+      ->setMethods(array('updateParentRevision'))->getMock();
+    $revHandler->expects($this->atLeastOnce())
+      ->method('updateParentRevision')
+      ->with($this->isInstanceOf(Paragraph::class));
+    $method = $this->getMethod($revHandler,'createRevision');
+    $paragraph = end($this->entityHelper->paragraphs);
+    $method->invoke($revHandler, $paragraph->reveal());
+    $paragraph->setNewRevision(Argument::type('bool'))->shouldHaveBeenCalled();
+    $paragraph->isDefaultRevision(Argument::type('bool'))->shouldHaveBeenCalled();
+    $paragraph->save()->shouldHaveBeenCalled();
   }
 }
