@@ -115,4 +115,31 @@ class TestRevisionHandler extends FpmTestBase
     $paragraph->isDefaultRevision($bool)->shouldHaveBeenCalled();
     $paragraph->save()->shouldHaveBeenCalled();
   }
+
+  /**
+   * @covers ::updateParentRevision
+   */
+  public function testUpdateParentRevision(){
+    $revHandler = $this->getMockBuilder(RevisionHandler::class)
+      ->disableOriginalConstructor()->getMock();
+    $method = $this->getMethod($revHandler,'updateParentRevision');
+    $rev_id = 1;
+    $frst = $this->entityHelper->paragraphs[1];
+    $scnd = $this->entityHelper->paragraphs[2];
+    $scnd->getParentEntity()->willReturn($frst->reveal());
+    $scnd->updateLoadedRevisionId()->will(function()use (&$rev_id){
+      $rev_id = 2;
+      return $this->reveal();
+    });
+    $scnd->getRevisionId()->will(function () use (&$rev_id) {
+      return $rev_id;
+    });
+    $scndObj = $scnd->reveal();
+    $method->invoke($revHandler, $scndObj);
+    $frst->save()->shouldHaveBeenCalled();
+    $parent = $scndObj->get('parent_field_name')->getValue()[0]['value'];
+    $value = $frst->reveal()->get($parent)->getValue()[0];
+    self::assertArrayHasKey('target_revision_id', $value);
+    self::assertSame(2, $value['target_revision_id']);
+  }
 }
