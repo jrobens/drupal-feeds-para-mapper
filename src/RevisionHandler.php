@@ -16,13 +16,6 @@ class RevisionHandler
   use StringTranslationTrait;
 
   /**
-   * The paragraph storage.
-   *
-   * @var EntityStorageInterface
-   */
-  protected $paragraph_storage;
-
-  /**
    * @var MessengerInterface
    *   The messenger service.
    */
@@ -50,8 +43,9 @@ class RevisionHandler
    */
   public function __construct(MessengerInterface $messenger, Importer $importer)
   {
-    $this->messenger;
+    $this->messenger = $messenger;
     $this->importer = $importer;
+    $stop = null;
   }
 
   /**
