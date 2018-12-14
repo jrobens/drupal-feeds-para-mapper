@@ -7,11 +7,8 @@ namespace Drupal\Tests\feeds_para_mapper\Unit\Helpers;
 use Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException;
 use Drupal\Component\Plugin\Exception\PluginNotFoundException;
 use Drupal\Core\Entity\EntityStorageInterface;
-use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Field\FieldItemList;
-use Drupal\Core\Field\FieldStorageDefinitionInterface;
 use Drupal\entity_reference_revisions\EntityReferenceRevisionsFieldItemList;
-use Drupal\field\FieldConfigInterface;
 use Drupal\node\Entity\Node;
 use Drupal\paragraphs\Entity\Paragraph;
 use Prophecy\Argument;
@@ -44,6 +41,12 @@ class EntityHelper
    * @var array
    */
   public $values;
+
+  /**
+   * @var array
+   */
+  public $revisions;
+
   /**
    * @var array
    */
@@ -51,7 +54,7 @@ class EntityHelper
 
   public function __construct(FieldHelper $fieldHelper){
     $this->prophet = new Prophet();
-    $this->node = $this->getEntity('node', $fieldHelper->node_bundle);
+    $this->node = $this->getEntity('node', $fieldHelper->node_bundle, 100);
     $this->paragraphs = array();
     $this->host_fields_values = array();
     $last = $this->node;
@@ -66,7 +69,7 @@ class EntityHelper
                 array('value' => $config->host_field)
               );
             }
-            $this->paragraphs[$paragraph_id] = $this->getEntity('paragraph', $target_bundle, $config->host_field, $last->reveal());
+            $this->paragraphs[$paragraph_id] = $this->getEntity('paragraph', $target_bundle, $paragraph_id, $config->host_field, $last->reveal());
             $this->values[$config->name][] = array(
               'target_id' => $paragraph_id
             );
@@ -84,6 +87,8 @@ class EntityHelper
    *   The entity type.
    * @param string $bundle
    *   The entity bundle.
+   * @param int $id
+   *   The entity id.
    * @param string $host_field
    *   The host field.
    * @param mixed $host
@@ -92,7 +97,7 @@ class EntityHelper
    * @return ObjectProphecy
    *   A mocked entity object.
    */
-  private function getEntity($type, $bundle, $host_field = null, $host = null){
+  private function getEntity($type, $bundle, $id, $host_field = null, $host = null){
     $class = Node::class;
     if($type === 'paragraph'){
       $class = Paragraph::class;
@@ -120,6 +125,7 @@ class EntityHelper
     });
     $entity->getEntityTypeId()->willReturn($type);
     $entity->bundle()->willReturn($bundle);
+    $entity->id()->willReturn($id);
     $that = $this;
     if(isset($host_field)){
       $entity->getParentEntity()->willReturn($host);
@@ -139,7 +145,43 @@ class EntityHelper
     $entity->getFieldDefinitions()->will(function ($args) use ($that, $type, $bundle){
       return $that->fieldHelper->getFieldDefinitions($type, $bundle);
     });
+    $entity->save()->willReturn(TRUE);
+    $this->addRevisionMethods($entity, $id);
     return $entity;
+  }
+
+  private function addRevisionMethods(ObjectProphecy &$entity, $id){
+    $that = $this;
+    $entity->setNewRevision(Argument::type('bool'))->will(function ($args) use ($that, $id){
+      $revisions = array();
+      if(isset($that->revisions)){
+        $revisions = $that->revisions;
+      }
+      if(!isset($revisions[$id])){
+        $revisions[$id] = array();
+      }
+      $rev_id = random_int(1,100);
+      while(isset($revisions[$id][$rev_id])){
+        $rev_id = random_int(1,100);
+      }
+      $revisions[$id][$rev_id] = array('id' => $rev_id, 'is_default' => FALSE);
+      $that->revisions = $revisions;
+    });
+    $entity->isDefaultRevision(Argument::type('bool'))->will(function ($args) use ($that, $id){
+      $rev = $that->revisions[$id];
+      $last = end($rev);
+      $last['is_default'] = $args[0];
+      $that->revisions[$id][$last['id']] = $last;
+    });
+    $entity->getRevisionId()->will(function () use ($that, $id){
+      foreach ($that->revisions[$id] as $revision) {
+        if($revision['is_default']){
+          return $revision['id'];
+        }
+      }
+      return NULL;
+    });
+    $entity->updateLoadedRevisionId()->willReturn($entity->reveal());
   }
 
   /**
@@ -171,6 +213,24 @@ class EntityHelper
         $v = $values[$field];
       }
       $v[] = array('entity' => $args[0]);
+      $values[$field] = $v;
+      return $this->reveal();
+    });
+    $fieldItem->set(Argument::type('int'), Argument::any())->will(function($args) use ($field, &$values){
+      $v = array();
+      if(isset($values[$field])){
+        $v = $values[$field];
+      }
+      $v[$args[0]] = $args[1];
+      $values[$field] = $v;
+      return $this->reveal();
+    });
+    $fieldItem->removeItem(Argument::type('int'))->will(function($args) use ($field, &$values){
+      $v = array();
+      if(isset($values[$field])){
+        $v = $values[$field];
+      }
+      unset($v[$args[0]]);
       $values[$field] = $v;
       return $this->reveal();
     });

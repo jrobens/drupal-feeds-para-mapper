@@ -1,15 +1,6 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: Hussein
- * Date: 12/13/2018
- * Time: 8:38 PM
- */
-
 namespace Drupal\Tests\feeds_para_mapper\Unit;
 
-
-use Drupal\Core\Entity\EntityInterface;
 use Drupal\feeds\Feeds\Target\Text;
 use Drupal\feeds_para_mapper\Importer;
 use Drupal\feeds_para_mapper\RevisionHandler;
@@ -42,6 +33,7 @@ class TestRevisionHandler extends FpmTestBase
    * @var Importer
    */
   protected $importer;
+
 
   protected function setUp()
   {
@@ -84,6 +76,39 @@ class TestRevisionHandler extends FpmTestBase
         self::assertNotEmpty($val);
       }
     }
+  }
+
+  /**
+   * @covers ::handle
+   */
+  public function testHandle(){
+    $field = end($this->fields)->reveal();
+    $info = $this->getTargetInfo();
+    $path = array(
+      array(
+        'bundle' => 'bundle_one',
+        'host_field' => 'paragraph_field',
+        'host_entity' => 'node',
+        'order' => 0,
+      ),
+      array(
+        'bundle' => 'bundle_two',
+        'host_field' => 'bundle_one_bundle_two',
+        'host_entity' => 'paragraph',
+        'order' => 0,
+      ),
+    );
+    $info->path = $path;
+    $field->set('target_info', $info);
+    $fpm_targets = array();
+    $fpm_targets[$field->getName()] = $field;
+    $node = $this->node->reveal();
+    $node->fpm_targets = $fpm_targets;
+    $result = $this->revHandler->handle($node);
+    self::assertTrue($result, "Should return true on handling success");
+    $node->fpm_targets = null;
+    $result = $this->revHandler->handle($node);
+    self::assertFalse($result, "should return false on handling failure");
   }
 
 }

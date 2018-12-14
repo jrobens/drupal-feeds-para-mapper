@@ -5,7 +5,6 @@ namespace Drupal\feeds_para_mapper;
 
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityStorageException;
-use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\field\FieldConfigInterface;
@@ -51,17 +50,21 @@ class RevisionHandler
   /**
    * @param EntityInterface $entity
    *   The entity that holds the paragraphs
+   *
+   * @return bool
+   *   TRUE on handling success.
    */
   public function handle(EntityInterface $entity){
     $this->entity = $entity;
     if(!isset($this->entity->fpm_targets)){
-      return;
+      return false;
     }
     foreach ($this->entity->fpm_targets as $fieldInstance) {
       $target_info = $fieldInstance->get('target_info');
       $this->checkUpdates($target_info->paragraphs);
     }
     $this->cleanUp($entity->fpm_targets);
+    return TRUE;
   }
 
 
@@ -100,14 +103,14 @@ class RevisionHandler
    * @param Paragraph $paragraph
    */
   protected function updateParentRevision($paragraph){
-    $host_field = $paragraph->parent_field_name->getValue()[0]['value'];
+    $host_field = $paragraph->get('parent_field_name')->getValue()[0]['value'];
     $revision_id = $paragraph->updateLoadedRevisionId()->getRevisionId();
     $parent = $paragraph->getParentEntity();
-    $values = $parent->{$host_field}->getValue();
+    $values = $parent->get($host_field)->getValue();
     foreach ($values as $index => $value) {
       if(isset($value['target_id']) && $value['target_id'] === $paragraph->id()){
         $value['target_revision_id'] = $revision_id;
-        $parent->{$host_field}->set($index,$value);
+        $parent->get($host_field)->set($index,$value);
       }
     }
     try {
