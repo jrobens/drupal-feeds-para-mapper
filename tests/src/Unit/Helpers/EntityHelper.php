@@ -45,11 +45,6 @@ class EntityHelper
   /**
    * @var array
    */
-  public $revisions;
-
-  /**
-   * @var array
-   */
   public $host_fields_values;
 
   public function __construct(FieldHelper $fieldHelper){
@@ -146,42 +141,7 @@ class EntityHelper
       return $that->fieldHelper->getFieldDefinitions($type, $bundle);
     });
     $entity->save()->willReturn(TRUE);
-    $this->addRevisionMethods($entity, $id);
     return $entity;
-  }
-
-  private function addRevisionMethods(ObjectProphecy &$entity, $id){
-    $that = $this;
-    $entity->setNewRevision(Argument::type('bool'))->will(function ($args) use ($that, $id){
-      $revisions = array();
-      if(isset($that->revisions)){
-        $revisions = $that->revisions;
-      }
-      if(!isset($revisions[$id])){
-        $revisions[$id] = array();
-      }
-      $rev_id = random_int(1,100);
-      while(isset($revisions[$id][$rev_id])){
-        $rev_id = random_int(1,100);
-      }
-      $revisions[$id][$rev_id] = array('id' => $rev_id, 'is_default' => FALSE);
-      $that->revisions = $revisions;
-    });
-    $entity->isDefaultRevision(Argument::type('bool'))->will(function ($args) use ($that, $id){
-      $rev = $that->revisions[$id];
-      $last = end($rev);
-      $last['is_default'] = $args[0];
-      $that->revisions[$id][$last['id']] = $last;
-    });
-    $entity->getRevisionId()->will(function () use ($that, $id){
-      foreach ($that->revisions[$id] as $revision) {
-        if($revision['is_default']){
-          return $revision['id'];
-        }
-      }
-      return NULL;
-    });
-    $entity->updateLoadedRevisionId()->willReturn($entity->reveal());
   }
 
   /**

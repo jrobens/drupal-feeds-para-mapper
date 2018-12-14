@@ -26,31 +26,12 @@ class TestRevisionHandler extends FpmTestBase
    */
   protected $type;
 
-  /**
-   * @var RevisionHandler
-   */
-  protected $revHandler;
-
-  /**
-   * @var Importer
-   */
-  protected $importer;
-
-
   protected function setUp()
   {
     $this->class = Text::class;
     $this->type  = "text";
     parent::setUp();
     $this->addServices($this->services);
-    $entity_manager = $this->entityHelper->getEntityTypeManagerMock()->reveal();
-    $field_manager = $this->fieldHelper->getEntityFieldManagerMock();
-    $mapper = $this->getMapperObject();
-    try {
-      $this->importer = new Importer($entity_manager, $field_manager, $mapper);
-      $this->revHandler = new RevisionHandler($this->messenger->reveal(), $this->importer);
-    } catch (\Exception $e) {
-    }
   }
 
   /**
@@ -65,7 +46,8 @@ class TestRevisionHandler extends FpmTestBase
     $constructor = $reflectedClass->getConstructor();
     // Force the constructor to throw error:
     // now call the constructor
-    $constructor->invoke($mock, $this->messenger->reveal(), $this->importer);
+    $importer = $this->prophesize(Importer::class);
+    $constructor->invoke($mock, $this->messenger->reveal(), $importer->reveal());
     $props = $reflectedClass->getProperties();
     $initialized = array(
       'messenger',
@@ -125,9 +107,12 @@ class TestRevisionHandler extends FpmTestBase
       ->with($this->isInstanceOf(Paragraph::class));
     $method = $this->getMethod($revHandler,'createRevision');
     $paragraph = end($this->entityHelper->paragraphs);
+    $bool = Argument::type('bool');
+    $paragraph->setNewRevision($bool)->willReturn(null);
+    $paragraph->isDefaultRevision($bool)->willReturn(null);
     $method->invoke($revHandler, $paragraph->reveal());
-    $paragraph->setNewRevision(Argument::type('bool'))->shouldHaveBeenCalled();
-    $paragraph->isDefaultRevision(Argument::type('bool'))->shouldHaveBeenCalled();
+    $paragraph->setNewRevision($bool)->shouldHaveBeenCalled();
+    $paragraph->isDefaultRevision($bool)->shouldHaveBeenCalled();
     $paragraph->save()->shouldHaveBeenCalled();
   }
 }

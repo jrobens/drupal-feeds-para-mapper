@@ -7,6 +7,7 @@ use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityStorageException;
 use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\Core\TypedData\Exception\MissingDataException;
 use Drupal\field\FieldConfigInterface;
 use Drupal\paragraphs\Entity\Paragraph;
 
@@ -104,21 +105,27 @@ class RevisionHandler
    *
    * @param Paragraph $paragraph
    */
-  protected function updateParentRevision($paragraph){
+  protected function updateParentRevision(Paragraph $paragraph){
     $host_field = $paragraph->get('parent_field_name')->getValue()[0]['value'];
     $revision_id = $paragraph->updateLoadedRevisionId()->getRevisionId();
     $parent = $paragraph->getParentEntity();
     $values = $parent->get($host_field)->getValue();
+    $message = $this->t("Failed to update host entity");
     foreach ($values as $index => $value) {
       if(isset($value['target_id']) && $value['target_id'] === $paragraph->id()){
         $value['target_revision_id'] = $revision_id;
-        $parent->get($host_field)->set($index,$value);
+        try {
+          $parent->get($host_field)->set($index, $value);
+        } catch (MissingDataException $e) {
+          $this->messenger->addError($message);
+          $this->messenger->addError($e);
+        }
       }
     }
     try {
       $parent->save();
     } catch (EntityStorageException $e) {
-      $this->messenger->addError($this->t("Failed to update host entity"));
+      $this->messenger->addError($message);
       $this->messenger->addError($e);
     }
   }
