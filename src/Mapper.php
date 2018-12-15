@@ -50,29 +50,26 @@ class Mapper
   {
     $paragraphs_fields = $this->findParagraphsFields($entityType, $bundle);
     $fields = array();
+    // Get sub fields for each paragraph field:
     foreach ($paragraphs_fields as $paragraphs_field) {
       $subFields = $this->getSubFields($paragraphs_field);
       $fields = array_merge($fields, $subFields);
     }
-    // Remove the fields that don't support feeds:
+    // Remove the fields that don't support feeds,
+    // and add some info on the supported fields:
     $definitions = $this->targetsManager->getDefinitions();
-    $supported = array_keys($definitions);
-    $fields = array_filter($fields, function ($item) use ($supported) {
-      $type = $item->getType();
-      return in_array($type, $supported);
-    });
-    // Add some info the field info object:
-    $prepared = array();
+    $supported = array();
     foreach ($fields as $field) {
-      foreach ($definitions as $name => $plugin) {
-        if($name === $field->getType()){
+      foreach ($definitions as $name => $plugin ) {
+        if(in_array($field->getType(), $plugin['field_types'])) {
           $this->updateInfo($field, "plugin", $plugin);
           $this->updateInfo($field, "type", $field->getType());
-          $prepared[] = $field;
+          $supported[] = $field;
+          break;
         }
       }
     }
-    return $prepared;
+    return $supported;
   }
 
   /**
