@@ -99,14 +99,13 @@ class WrapperTarget extends FieldTargetBase implements ConfigurableTargetInterfa
   }
   public function createTargetInstance(){
     $mapper = $this->getMapper();
-    $field_type = $mapper->getInfo($this->field,'type');
     $plugin = $mapper->getInfo($this->field,'plugin');
     $class = $plugin['class'];
     $target = $class::prepareTarget($this->field);
     $target->setPluginId($plugin['id']);
     $instance = null;
     try {
-      $instance = $this->plugin_manager->createInstance($field_type, $this->configuration);
+      $instance = $this->plugin_manager->createInstance($plugin['id'], $this->configuration);
     } catch (PluginException $e) {
     }
     return $instance;
