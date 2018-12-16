@@ -7,6 +7,7 @@ use Drupal\Tests\BrowserTestBase;
 /**
  * Test basic functionality via BrowserTestBase.
  * @todo: tests are failing because some dependencies modules use PrivateTempStore, see https://www.drupal.org/project/feeds/issues/3012342
+ * @todo: for now we applied the patch in the issue, waiting for module update
  *
  */
 abstract class FeedsParaMapperTestBase extends BrowserTestBase {
