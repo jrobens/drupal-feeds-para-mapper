@@ -80,9 +80,7 @@ abstract class FeedsParaMapperTestBase extends BrowserTestBase {
     $last_bundle = array($this->bundles[$last_key]['name']);
     $this->createCT($this->contentType, $this->paragraphField, $last_bundle);
   }
-  protected function checkThings(){
-    #$this->drupalGet('admin/people/permissions');
-  }
+
   /**
    * Creates the needed Paragraphs bundles in a loop.
    *
