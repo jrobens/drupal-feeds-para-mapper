@@ -152,7 +152,7 @@ class EntityHelper
    *
    * @return EntityReferenceRevisionsFieldItemList
    */
-  private function getFieldItemListMock($field, $type = "reference", $instance = null){
+  public function getFieldItemListMock($field, $type = "reference", $instance = null){
     $class  = EntityReferenceRevisionsFieldItemList::class;
     $values = &$this->values;
     if($type !== 'reference'){

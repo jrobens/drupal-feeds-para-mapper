@@ -45,7 +45,6 @@ class RevisionHandler
   {
     $this->messenger = $messenger;
     $this->importer = $importer;
-    $stop = null;
   }
 
   /**
@@ -178,6 +177,7 @@ class RevisionHandler
         }
       }
     }
+    // Remove each paragraph id from its parent entity field value:
     $parent = $attached[0]->getParentEntity();
     $parent_field = $attached[0]->get('parent_field_name')->getValue()[0]['value'];
     $removed = 0;

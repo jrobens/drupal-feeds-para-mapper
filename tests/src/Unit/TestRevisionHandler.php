@@ -2,6 +2,7 @@
 namespace Drupal\Tests\feeds_para_mapper\Unit;
 
 use Drupal\Core\Entity\EntityInterface;
+use Drupal\entity_reference_revisions\EntityReferenceRevisionsFieldItemList;
 use Drupal\feeds\Feeds\Target\Text;
 use Drupal\feeds_para_mapper\Importer;
 use Drupal\feeds_para_mapper\RevisionHandler;
@@ -176,5 +177,54 @@ class TestRevisionHandler extends FpmTestBase
     // And call the method:
     $method = $this->getMethod($revHandler, 'cleanUp');
     $method->invoke($revHandler, array($field));
+  }
+
+  /**
+   * @covers ::removeUnused
+   */
+  public function testRemoveUnused(){
+    // Mock RevisionHandler:
+    $revHandler = $this->getMockBuilder(RevisionHandler::class)
+      ->disableOriginalConstructor()
+      ->setMethods(array('createRevision'))->getMock();
+    $revHandler->expects($this->never())
+      ->method('createRevision')
+      ->with($this->isInstanceOf(Paragraph::class));
+    $paragraphs = $this->entityHelper->paragraphs;
+    // Add additional field to test in common fields removal functionality:
+    $parProph = $paragraphs[2];
+    $anotherValue = array(array('value' => 'Test value'));
+    $itemList = $this->prophesize(EntityReferenceRevisionsFieldItemList::class);
+    $itemList->getValue()->willReturn($anotherValue);
+    $parProph->get('another_field')->willReturn($itemList->reveal());
+    $paragraph = $parProph->reveal();
+    $used_entities = array($paragraph);
+    $attached = array($paragraph, $paragraph);
+    $field = end($this->fields)->reveal();
+    $info = $this->getTargetInfo();
+    $info->paragraphs = array($paragraph);
+    $info->in_common = array(
+      array('name' => 'another_field'),
+    );
+    $field->set('target_info', $info);
+    $method = $this->getMethod(RevisionHandler::class,'removeUnused');
+    $method->invoke($revHandler, $used_entities, $attached, $field);
+
+    // Test with no in common fields:
+    $info->in_common = array();
+    $field->set('target_info', $info);
+
+    // Mock RevisionHandler to expect a call to createRevision method:
+    $revHandler = $this->getMockBuilder(RevisionHandler::class)
+      ->disableOriginalConstructor()
+      ->setMethods(array('createRevision'))->getMock();
+    $revHandler->expects($this->atLeastOnce())
+      ->method('createRevision')
+      ->with($this->isInstanceOf(Paragraph::class));
+    $method->invoke($revHandler, $used_entities, $attached, $field);
+    $parent = $paragraph->getParentEntity();
+    $parent_field = $paragraph->get('parent_field_name')->getValue()[0]['value'];
+    $parentValue = $parent->get($parent_field)->getValue();
+    self::assertTrue(!isset($parentValue['target_id']), 'The parent field value is cleaned up');
   }
 }
