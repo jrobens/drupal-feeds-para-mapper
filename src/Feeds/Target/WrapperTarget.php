@@ -8,6 +8,7 @@ use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Messenger\MessengerInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\feeds\Annotation\FeedsTarget;
 use Drupal\feeds\FeedInterface;
 use Drupal\feeds\FeedTypeInterface;
@@ -208,8 +209,7 @@ class WrapperTarget extends FieldTargetBase implements ConfigurableTargetInterfa
     $final_str = $sum;
     if ($has_settings) {
       $temp_sum = "Maximum values: " . $this->configuration['max_values'];
-      $final_str = $this->t($temp_sum);
-      if(isset($sum)) {
+      if(isset($sum) && $sum instanceof TranslatableMarkup) {
         $final_str = $sum->getUntranslatedString();
         $final_str .= "<br>" . $temp_sum;
         $args = $sum->getArguments();
@@ -219,6 +219,9 @@ class WrapperTarget extends FieldTargetBase implements ConfigurableTargetInterfa
         else {
           $final_str = $this->t($final_str);
         }
+      }
+      else {
+        $final_str = $sum . "<br>" . $this->t($temp_sum);
       }
     }
     return $final_str;
