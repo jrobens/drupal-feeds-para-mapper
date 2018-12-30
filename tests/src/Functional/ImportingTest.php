@@ -13,4 +13,9 @@ class ImportingTest extends FeedsParaMapperTestBase {
   {
     parent::setUp();
   }
+
+  public function testThings(){
+    $this->drupalGet('http://localhost/admin/structure/feeds');
+    debug('my data');
+  }
 }

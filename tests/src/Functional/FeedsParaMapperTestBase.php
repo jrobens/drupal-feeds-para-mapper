@@ -16,6 +16,7 @@ abstract class FeedsParaMapperTestBase extends BrowserTestBase {
   protected $profile = 'testing';
   protected $bundles;
   protected $contentType;
+  protected $feedType;
   protected $paragraphField;
   protected $importer;
   protected $multiValued = FALSE;
@@ -80,6 +81,8 @@ abstract class FeedsParaMapperTestBase extends BrowserTestBase {
     $last_key = count($this->bundles) - 1;
     $last_bundle = array($this->bundles[$last_key]['name']);
     $this->createCT($this->contentType, $this->paragraphField, $last_bundle);
+    $this->feedType = "product_feed";
+    $this->createFeedType($this->contentType, $this->feedType);
   }
 
   /**
@@ -173,6 +176,21 @@ abstract class FeedsParaMapperTestBase extends BrowserTestBase {
     foreach ($fields as $field_name => $details) {
       $this->createField($path,$field_name, $details['cardinality'], $details['type'], $details['widget'], $details['bundles']);
     }
+  }
+
+  protected function createFeedType($contentType, $feedType){
+    $this->drupalGet('admin/structure/feeds/add');
+    $edit = array(
+      'id' => $feedType,
+      'label' => $feedType,
+      'description' => $feedType,
+      'fetcher' => 'upload',
+      'parser' => 'csv',
+      'processor' => 'entity:node',
+      'processor_wrapper[advanced][values][type]' => $contentType,
+    );
+    $this->drupalPostForm(null, $edit, t("Save and add mappings"));
+    //@todo: error on save "The referenced entity (user: 0) does not exist"
   }
 
   /**
