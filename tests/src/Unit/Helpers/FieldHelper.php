@@ -42,6 +42,7 @@ class FieldHelper
 
     $fieldsConfig = array(
       new FieldConfig(
+        'Paragraph field',
         'paragraph_field',
         'entity_reference_revisions',
         1,
@@ -58,6 +59,7 @@ class FieldHelper
         1
       ),
       new FieldConfig(
+        'Bundle one bundle two',
         'bundle_one_bundle_two',
         'entity_reference_revisions',
         2,
@@ -74,6 +76,7 @@ class FieldHelper
         2
       ),
       new FieldConfig(
+        'Bundle two text',
         'bundle_two_text',
         'text',
         3,
@@ -104,6 +107,7 @@ class FieldHelper
     $that = $this;
     $field = $this->prophet->prophesize(FieldConfigInterface::class);
     $field->getType()->willReturn($config->type);
+    $field->getLabel()->willReturn($config->label);
     $field->getSettings()->willReturn($config->settings);
     $field->getSetting(Argument::type('string'))
       ->willReturn($config->settings['handler_settings']);
@@ -129,6 +133,9 @@ class FieldHelper
       return $that->getFieldStorageMock($config);
     });
     $field->set('bundle',$config->host_bundle);
+    $field->set('label', Argument::type('string'))->will(function ($args) use ($config){
+      $config->label = $args[0];
+    });
     return $field;
   }
   protected function getFieldStorageMock(FieldConfig $config){

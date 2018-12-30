@@ -6,6 +6,11 @@ class FieldConfig {
   /**
    * @var string
    */
+  public $label;
+
+  /**
+   * @var string
+   */
   public $name;
 
   /**
@@ -55,6 +60,7 @@ class FieldConfig {
 
   /**
    * FieldConfig constructor.
+   * @param string $label
    * @param string $name
    * @param string $type
    * @param int $id
@@ -66,8 +72,9 @@ class FieldConfig {
    * @param string $host_field
    * @param int $host_id
    */
-  public function __construct($name, $type, $id, $cardinality, array $settings,  $paragraph_ids, $host_type, $host_bundle, $host_field, $host_id)
+  public function __construct($label, $name, $type, $id, $cardinality, array $settings,  $paragraph_ids, $host_type, $host_bundle, $host_field, $host_id)
   {
+    $this->label = $label;
     $this->name = $name;
     $this->type = $type;
     $this->id = $id;

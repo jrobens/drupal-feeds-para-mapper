@@ -136,6 +136,7 @@ class TestMapper extends FpmTestBase
    */
   public function testSetFieldsInCommon(){
     $conf = new FieldConfig(
+      'Bundle two field two',
       'bundle_two_field_two',
       'text',
       4,

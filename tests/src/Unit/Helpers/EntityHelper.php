@@ -233,7 +233,8 @@ class EntityHelper
     $that = $this;
     $storage->create(Argument::type('array'))->will(function($args) use ($that){
       $bundle = $args[0]['type'];
-      return $that->getEntity('paragraph', $bundle)->reveal();
+      $id = random_int(10,10);
+      return $that->getEntity('paragraph', $bundle, $id)->reveal();
     });
     $storage->load(Argument::any())->will(function($args) use ($that){
       $id = $args[0];
