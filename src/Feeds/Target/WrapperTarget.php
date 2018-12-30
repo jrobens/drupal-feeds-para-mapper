@@ -140,6 +140,9 @@ class WrapperTarget extends FieldTargetBase implements ConfigurableTargetInterfa
     $class = $plugin['class'];
     $field_definition->set('field_type', $field_type);
     $targetDef = $class::prepareTarget($field_definition);
+    $label = $field_definition->getLabel();
+    $label .= ' (' . $field_definition->getName() . ')';
+    $field_definition->setLabel($label);
     $field_definition->set('field_type','entity_reference_revisions');
     return $targetDef;
   }
