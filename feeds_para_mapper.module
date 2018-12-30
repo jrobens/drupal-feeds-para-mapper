@@ -69,7 +69,7 @@ function feeds_para_mapper_entity_update(Drupal\Core\Entity\EntityInterface $ent
 {
   if(isset($entity->fpm_targets)){
     $rev = Drupal::service('feeds_para_mapper.revision_handler');
-    $rev->handle();
+    $rev->handle($entity);
   }
 }
 
