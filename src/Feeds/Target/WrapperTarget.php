@@ -122,7 +122,7 @@ class WrapperTarget extends FieldTargetBase implements ConfigurableTargetInterfa
     $target->set('field_type', $type);
     try{
       $importer = \Drupal::service('feeds_para_mapper.importer');
-      $importer->import($feed, $entity, $target, $this->configuration, $values, $this->targetInstance);
+      $importer->import($this->feedType, $feed, $entity, $target, $this->configuration, $values, $this->targetInstance);
     }catch (\Exception $exception){
       $this->messenger->addError($exception);
     }

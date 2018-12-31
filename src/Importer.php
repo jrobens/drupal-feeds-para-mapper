@@ -7,6 +7,8 @@ use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\feeds\FeedInterface;
+use Drupal\feeds\FeedTypeInterface;
+use Drupal\feeds\FieldTargetDefinition;
 use Drupal\feeds\Plugin\Type\Target\FieldTargetBase;
 use Drupal\feeds_para_mapper\Utility\TargetInfo;
 use Drupal\field\FieldConfigInterface;
@@ -84,7 +86,7 @@ class Importer {
     }
   }
 
-  public function import(FeedInterface $feed, EntityInterface $entity, FieldConfigInterface $target, array $configuration, array $values, FieldTargetBase $instance){
+  public function import(FeedTypeInterface $feedType, FeedInterface $feed, EntityInterface $entity, FieldConfigInterface $target, array $configuration, array $values, FieldTargetBase $instance){
     $this->feed           = $feed;
     $this->entity         = $entity;
     $this->target         = $target;
@@ -94,12 +96,31 @@ class Importer {
     $this->instance       = $instance;
     //@todo: remove explode()
     //$this->explode();
+    $this->resetTypes($feedType->getMappingTargets());
     $paragraphs = $this->initHostParagraphs();
     foreach ($paragraphs as $paragraph) {
       $attached = $this->getTarget($paragraph['paragraph'], $this->target);
       $this->setValue($attached[0], $paragraph['value']);
       if(!$this->entity->isNew()){
         $this->appendToUpdate($attached[0]);
+      }
+    }
+  }
+
+  /**
+   * Resets the fields types to the original types.
+   *
+   * In order to avoid the created entity having the wrong fields types (e.g 'entity_reference_revisions'),
+   * we need to reset them back to the original types
+   *
+   * @param FieldTargetDefinition[] $targets
+   *  The targets that are being mapped.
+   */
+  private function resetTypes($targets){
+    foreach ($targets as $target) {
+      $field = $target->getFieldDefinition();
+      if($field instanceof FieldConfigInterface && $info = $field->get('target_info')){
+        $field->set('field_type', $info->type);
       }
     }
   }
@@ -114,6 +135,10 @@ class Importer {
     $paragraph->{$target} = NULL;
     // We call setTarget on the target plugin instance, and it will call prepareValues,
     // which will eventually set the value for the field.
+    // @todo: changing the field type is causing the paragraph entity to have wrong field type,
+    // even after changing it later to the original type,
+    // maybe before creating the paragraph entity we need to change all the field types we are going to map
+
     $this->instance->setTarget($this->feed, $paragraph, $target, $value);
   }
 
@@ -548,7 +573,7 @@ class Importer {
    *   The created Paragraphs entity
    */
   private function createParagraph($field, $bundle, $host_entity) {
-    $created = $this->paragraph_storage->create(array("type" => $bundle));
+    $created = $this->paragraph_storage->create();
     $host_entity->get($field)->appendItem($created);
     $host_info = array(
       'type' => $host_entity->getEntityTypeId(),
