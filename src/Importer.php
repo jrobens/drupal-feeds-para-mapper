@@ -573,7 +573,7 @@ class Importer {
    *   The created Paragraphs entity
    */
   private function createParagraph($field, $bundle, $host_entity) {
-    $created = $this->paragraph_storage->create();
+    $created = $this->paragraph_storage->create(array("type" => $bundle));
     $host_entity->get($field)->appendItem($created);
     $host_info = array(
       'type' => $host_entity->getEntityTypeId(),
