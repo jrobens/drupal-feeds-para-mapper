@@ -6,8 +6,6 @@
 */
 
 use \Drupal\Core\Routing\RouteMatchInterface;
-use Drupal\feeds_para_mapper\Utility\MapperHelper as MapperHelper;
-use Drupal\feeds_para_mapper\Utility\Importer as Importer;
 /**
  * Implements hook_help().
  */
@@ -55,9 +53,31 @@ function feeds_para_mapper_help($route_name, RouteMatchInterface $route_match){
  */
 function feeds_para_mapper_feeds_targets_alter(&$targets)
 {
+  $hasMapping = false;
   foreach ($targets as $name => $target) {
-    if($target->getPluginId() === "paragraphs"){
-      unset($targets[$name]);
+    if ($target->getPluginId() === "paragraphs") {
+      $hasMapping = true;
+      break;
+    }
+  }
+  // Remove the default paragraphs mapping:
+  // Note: this will change all feed types and not the current one only
+  if ($hasMapping) {
+    $entityTypeManager = Drupal::service('entity_type.manager');
+    $storage = $entityTypeManager->getStorage('feeds_feed_type');
+    $entities = $storage->loadMultiple();
+    foreach ($entities as $item) {
+      $mappings = $item->getMappings();
+      $changed = false;
+      foreach ($mappings as $delta => $mapping) {
+        if (isset($mapping['settings']['paragraphs_type'])) {
+          $item->removeMapping($delta);
+          $changed = true;
+        }
+      }
+      if ($changed) {
+        $item->save();
+      }
     }
   }
 }
