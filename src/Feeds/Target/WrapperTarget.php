@@ -94,7 +94,10 @@ class WrapperTarget extends FieldTargetBase implements ConfigurableTargetInterfa
         continue;
       }
       $wrapper_target->setPluginId("wrapper_target");
-      $id = $field->getName();
+      $path = $mapper->getInfo($field,'path');
+      $last_host = end($path);
+      $wrapper_target->setPluginId("wrapper_target");
+      $id = $last_host['bundle'] ."_". $field->getName();
       $targets[$id] = $wrapper_target;
     }
   }
@@ -135,14 +138,16 @@ class WrapperTarget extends FieldTargetBase implements ConfigurableTargetInterfa
     $mapper = \Drupal::service('feeds_para_mapper.mapper');
     $field_type = $mapper->getInfo($field_definition,'type');
     $plugin = $mapper->getInfo($field_definition,'plugin');
+    $path = $mapper->getInfo($field_definition,'path');
     if(!isset($field_type) || !isset($plugin)){
       return null;
     }
     $class = $plugin['class'];
     $field_definition->set('field_type', $field_type);
     $targetDef = $class::prepareTarget($field_definition);
+    $last_host = end($path);
     $label = $field_definition->getLabel();
-    $label .= ' (' . $field_definition->getName() . ')';
+    $label .= ' (' . $last_host['host_field'] .':' . $last_host['bundle'] . ":" . $field_definition->getName() . ')';
     $field_definition->set('label', $label);
     $field_definition->set('field_type','entity_reference_revisions');
     return $targetDef;
