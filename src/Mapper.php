@@ -101,12 +101,7 @@ class Mapper
    * @return array
    */
   public function getSubFields($target, array $result = array(), array $first_host = array()){
-    $settings = $target->getSettings();
-    if(!isset($settings['handler_settings']['target_bundles'])){
-      return array();
-    }
-    $target_bundles = $settings['handler_settings']['target_bundles'];
-    $target_bundles = array_values($target_bundles);
+    $target_bundles = $this->getEnabledBundles($target);
     foreach ($target_bundles as $target_bundle) {
       $sub_fields = $this->entityFieldManager->getFieldDefinitions('paragraph', $target_bundle);
       $sub_fields = array_filter($sub_fields, function ($item){
@@ -147,6 +142,36 @@ class Mapper
     return $result;
   }
 
+  /**
+   * Gets the enabled bundles for a paragraph field.
+   *
+   * @param FieldDefinitionInterface $target
+   *
+   * @return array
+   */
+  private function getEnabledBundles($target){
+    $settings = $target->getSettings();
+    $target_bundles = array();
+    if (isset($settings['handler_settings']['target_bundles'])) {
+      $target_bundles = $settings['handler_settings']['target_bundles'];
+      $target_bundles = array_values($target_bundles);
+    }
+    else if (isset($settings['handler_settings']['target_bundles_drag_drop'])) {
+      // get the selected bundles:
+      $selected_bundles = array_filter($settings['handler_settings']['target_bundles_drag_drop'], function($item){
+        return $item['enabled'];
+      });
+
+      if (count($selected_bundles)){
+        $target_bundles = array_keys($selected_bundles);
+      }
+      else {
+        // no selected bundles, return all bundles:
+        $target_bundles = array_keys($settings['handler_settings']['target_bundles_drag_drop']);
+      }
+    }
+    return $target_bundles;
+  }
   /**
    * Updates a property of TargetInfo object.
    *
