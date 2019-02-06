@@ -352,6 +352,10 @@ class Importer {
   private function createParagraphs($entity, array $slices) {
     $items = array();
     for ($i = 0; $i < count($slices); $i++) {
+      $should_create = $this->shouldCreateNew($entity, $slices, $slices[$i]);
+      if(!$should_create){
+        return $items;
+      }
       if ($i === 0) {
         // Create the first host Paragraphs entity/entities.
         $par = $this->createParents($entity);
@@ -591,19 +595,21 @@ class Importer {
    * When we find existing attached paragraphs entities while updating,
    * we use this to determine if we can create new paragraph entities.
    *
-   * @param Paragraph $currentParagraph
+   * @param EntityInterface $entity
    *   The currently attached Paragraphs entity.
    * @param array $slices
    *   The sliced values based on user choice & the field cardinality.
+   * @param array $futureValue
+   *   The value that the target field will hold.
    *
    * @return bool
    *   TRUE if we should create new Paragraphs entity.
    */
-  private function shouldCreateNew(Paragraph $currentParagraph, array $slices) {
+  private function shouldCreateNew($entity, array $slices, array $futureValue = array()) {
     $path = $this->targetInfo->path;
     if (count($path) > 1) {
       $host_field = $path[count($path) -1]['host_field'];
-      $host = $currentParagraph->getParentEntity();
+      $host = $entity->getParentEntity();
     }
     else {
       $target = $path[0]['host_field'];
@@ -619,13 +625,13 @@ class Importer {
       return FALSE;
     }
     $exceeded = TRUE;
-    if($skip_check){
+    if ($skip_check) {
       $max = $this->mapper->getMaxValues($this->target, $this->configuration);
       $allowed = $max;
       // Compare the child entity values with max values allowed:
-      $target_values = $currentParagraph->get($this->target->getName())->getValue();
-      if(count($target_values)){
-        if(count($target_values) < $max){
+      // Compare the child entity values with max values allowed:
+      if (count($futureValue)) {
+        if (count($futureValue) < $max) {
           $exceeded = FALSE;
         }
       }
@@ -636,6 +642,9 @@ class Importer {
     // If the parent or the child entity can hold more values (children),
     // and the child cannot hold values, we should:
     if (count($current_values) < count($slices) && $allowed > count($current_values) && $exceeded) {
+      return TRUE;
+    }
+    if ($skip_check) {
       return TRUE;
     }
     return FALSE;
