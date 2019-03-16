@@ -53,32 +53,54 @@ function feeds_para_mapper_help($route_name, RouteMatchInterface $route_match){
  */
 function feeds_para_mapper_feeds_targets_alter(&$targets)
 {
-  $hasMapping = false;
+  // Collect Paragraphs fields targets to remove from mappings:
+  $toRemove = [];
   foreach ($targets as $name => $target) {
     if ($target->getPluginId() === "paragraphs") {
-      $hasMapping = true;
-      break;
+      $field = $target->getFieldDefinition();
+      if(!isset($field->fpm_removed)){
+        $toRemove[] = $target;
+      }
     }
   }
-  // Remove the default paragraphs mapping:
-  // Note: this will change all feed types and not the current one only
-  if ($hasMapping) {
-    $entityTypeManager = Drupal::service('entity_type.manager');
-    $storage = $entityTypeManager->getStorage('feeds_feed_type');
-    $entities = $storage->loadMultiple();
-    foreach ($entities as $item) {
-      $mappings = $item->getMappings();
-      $changed = false;
-      foreach ($mappings as $delta => $mapping) {
-        if (isset($mapping['settings']['paragraphs_type'])) {
-          $item->removeMapping($delta);
-          $changed = true;
-        }
-      }
-      if ($changed) {
-        $item->save();
+  if (empty($toRemove)) {
+    return;
+  }
+  // Search for the feed type that contains the above Paragraphs targets:
+  $entityTypeManager = Drupal::service('entity_type.manager');
+  $storage = $entityTypeManager->getStorage('feeds_feed_type');
+  $feedTypes = $storage->loadMultiple();
+  $firstTarget = $toRemove[0];
+  $feedType = array_filter($feedTypes, function($item) use ($firstTarget) {
+    $mappings = $item->getMappings();
+    foreach ($mappings as $mapping) {
+      if ($mapping['target'] === $firstTarget->getFieldDefinition()->getName()) {
+        return $item;
       }
     }
+    return false;
+  });
+  $feedType = reset($feedType);
+  if (!$feedType) {
+    return;
+  }
+  // Remove the default Paragraphs mapping:
+  $mappings = $feedType->getMappings();
+  $changed = false;
+  foreach ($toRemove as $target) {
+    $field = $target->getFieldDefinition();
+    foreach ($mappings as $delta => $mapping) {
+      if ($mapping['target'] === $field->getName()) {
+        $feedType->removeMapping($delta);
+        $changed = true;
+        $field->fpm_removed = TRUE;
+      }
+    }
+  }
+  if ($changed) {
+    $messenger = Drupal::messenger();
+    $messenger->addWarning(t('Mapping has been updated, please refresh the page.'));
+    $feedType->save();
   }
 }
 
