@@ -114,11 +114,16 @@ class WrapperTarget extends FieldTargetBase implements ConfigurableTargetInterfa
     }
     return $instance;
   }
+
   /**
    * {@inheritdoc}
    */
   public function setTarget(FeedInterface $feed, EntityInterface $entity, $field_name, array $values)
   {
+    $empty = $this->isEmpty($values);
+    if ($empty) {
+      return;
+    }
     $target = $this->targetDefinition;
     $target = $target->getFieldDefinition();
     $type = $this->mapper->getInfo($target,'type');
@@ -129,6 +134,37 @@ class WrapperTarget extends FieldTargetBase implements ConfigurableTargetInterfa
     }catch (\Exception $exception){
       $this->messenger->addError($exception);
     }
+  }
+
+  /**
+   * Checks whether the values are empty.
+   *
+   * @param array $values
+   *   The values
+   *
+   * @return bool
+   *   True if the values are empty.
+   */
+  public function isEmpty(array $values){
+    $properties = $this->targetDefinition->getProperties();
+    $emptyValues = 0;
+    foreach ($values as $value) {
+      $currentProperties = array_keys($value);
+      $emptyProps = [];
+      foreach ($properties as $property) {
+        foreach ($currentProperties as $currentProperty) {
+          if ($currentProperty === $property) {
+            if (!strlen($value[$currentProperty])) {
+              $emptyProps[] = $currentProperty;
+            }
+          }
+        }
+      }
+      if (count($emptyProps) === count($properties)) {
+        $emptyValues++;
+      }
+    }
+    return $emptyValues === count($values);
   }
 
   /**
