@@ -177,6 +177,12 @@ class Mapper
         $target_bundles = array_keys($settings['handler_settings']['target_bundles_drag_drop']);
       }
     }
+
+    // Remove the $target bundle to prevent looping:
+    $target_bundle = $target->get('bundle');
+    $target_bundles = array_filter($target_bundles, function($item) use ($target_bundle){
+      return $item !== $target_bundle;
+    });
     return $target_bundles;
   }
   /**
