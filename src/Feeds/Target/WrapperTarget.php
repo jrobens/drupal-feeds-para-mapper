@@ -279,5 +279,32 @@ class WrapperTarget extends FieldTargetBase implements ConfigurableTargetInterfa
     return \Drupal::service('feeds_para_mapper.mapper');
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function calculateDependencies()
+  {
+    $this->dependencies = parent::calculateDependencies();
+    // Add the configured field as a dependency.
+    $field_definition = $this->targetDefinition
+      ->getFieldDefinition();
+    // We need to add all parent fields as dependencies
+    $fields = $this->mapper->loadParentFields($field_definition);
+    $fields[] = $field_definition;
+    foreach ($fields as $field) {
+      if ($field && $field instanceof EntityInterface) {
+        $this->dependencies['config'][] = $field->getConfigDependencyName();
+      }
+    }
+    return $this->dependencies;
+  }
+
+
+  /**
+   * {@inheritdoc}
+   */
+  public function onDependencyRemoval(array $dependencies) {
+    return parent::onDependencyRemoval($dependencies);
+  }
 
 }

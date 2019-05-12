@@ -95,6 +95,7 @@ class Importer {
     $this->targetInfo     = $target->get('target_info');
     $this->instance       = $instance;
     //@todo: remove explode()
+    // @todo: handle taking a value from $values and adding it to a different bundle field
     //$this->explode();
     $this->resetTypes($feedType->getMappingTargets());
     $paragraphs = $this->initHostParagraphs();
@@ -124,7 +125,6 @@ class Importer {
       }
     }
   }
-
   /**
    * @param Paragraph $paragraph
    * @param $value

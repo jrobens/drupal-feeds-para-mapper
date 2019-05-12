@@ -114,14 +114,16 @@ class Mapper
             'bundle' => $target_bundle,
             'host_field' => $target->getName(),
             'host_entity' => $target->getTargetEntityTypeId(),
+            'host_field_bundle' => $target->get('bundle'),
           );
         }
         // If we found nested Paragraphs field,
         // loop through its sub fields to include them:
-        if ($sub_field->getType() === 'entity_reference_revisions') {
+        $wrapped = isset($sub_field->target_info);
+        if ($sub_field->getType() === 'entity_reference_revisions' && !$wrapped) {
           $result = $this->getSubFields($sub_field, $result, $first_host);
         }
-        else if($sub_field->getType() !== "feeds_item"){
+        else if($sub_field->getType() !== "feeds_item" && !$wrapped){
           $host_allowed = $target->getFieldStorageDefinition()->getCardinality();
           $fieldAllowed = $sub_field->getFieldStorageDefinition()->getCardinality();
           $unlimited = FieldStorageDefinitionInterface::CARDINALITY_UNLIMITED;
@@ -135,6 +137,11 @@ class Mapper
           $path = $this->buildPath($sub_field, $first_host);
           $this->updateInfo($sub_field, "path", $path);
           $this->setFieldsInCommon($sub_field, $result);
+          $result[] = $sub_field;
+        }
+        else if ($wrapped) {
+          $type = $sub_field->target_info->type;
+          $sub_field->set('field_type', $type);
           $result[] = $sub_field;
         }
       }
@@ -317,6 +324,7 @@ class Mapper
         $new_path = array(
           'bundle' => $host['bundle']['name'],
           'host_field' => $host['host_field']->getName(),
+          'host_field_bundle' => $host['host_field']->get('bundle'),
           'host_entity' => 'paragraph',
         );
         array_unshift($path, $new_path);
@@ -364,5 +372,23 @@ class Mapper
       $res = $crd;
     }
     return $res;
+  }
+
+  /**
+   * Loads the parent fields for a nested field
+   *
+   * @param $field
+   *
+   * @return FieldDefinitionInterface[]
+   */
+  public function loadParentFields(FieldDefinitionInterface $field){
+    $target_info = $field->target_info;
+    $parents = array();
+    foreach ($target_info->path as $parentI) {
+      $bundle = isset($parentI['host_field_bundle']) ? $parentI['host_field_bundle']: $parentI['bundle'];
+      $fields = $this->entityFieldManager->getFieldDefinitions($parentI['host_entity'],$bundle);
+      $parents[] = $fields[$parentI['host_field']];
+    }
+    return $parents;
   }
 }
