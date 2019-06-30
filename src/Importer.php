@@ -607,7 +607,7 @@ class Importer {
    */
   private function shouldCreateNew($entity, array $slices, array $futureValue = array()) {
     $path = $this->targetInfo->path;
-    if (count($path) > 1) {
+    if (count($path) > 1 && $entity instanceof Paragraph) {
       $host_field = $path[count($path) -1]['host_field'];
       $host = $entity->getParentEntity();
     }
