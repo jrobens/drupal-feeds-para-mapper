@@ -11,5 +11,6 @@ class TargetInfo
   public $in_common;
   public $has_settings;
   public $max_values;
+  public $properties;
   public $paragraphs = array();
 }

@@ -85,11 +85,16 @@ class WrapperTarget extends FieldTargetBase implements ConfigurableTargetInterfa
     $processor = $feed_type->getProcessor();
     $entity_type = $processor->entityType();
     $bundle = $processor->bundle();
+    /**
+     * @var Mapper $mapper
+     */
     $mapper = \Drupal::service('feeds_para_mapper.mapper');
     $sub_fields = $mapper->getTargets($entity_type,$bundle);
     foreach ($sub_fields as $field) {
       $field->set('field_type', 'entity_reference_revisions');
       $wrapper_target = self::prepareTarget($field);
+      $properties = $wrapper_target->getProperties();
+      $mapper->updateInfo($field, 'properties', $properties);
       if(!isset($wrapper_target)){
         continue;
       }
@@ -154,9 +159,22 @@ class WrapperTarget extends FieldTargetBase implements ConfigurableTargetInterfa
       foreach ($properties as $property) {
         foreach ($currentProperties as $currentProperty) {
           if ($currentProperty === $property) {
-            if (!strlen($value[$currentProperty])) {
-              $emptyProps[] = $currentProperty;
-            }
+              if (is_array($value[$currentProperty])) {
+                  $emptySubValues = 0;
+                  foreach ($value[$currentProperty] as $subValue) {
+                      if (!strlen($subValue)) {
+                          $emptySubValues++;
+                      }
+                  }
+                  if ($emptySubValues === count($value[$currentProperty])) {
+                      $emptyProps[] = $currentProperty;
+                  }
+              }
+              else {
+                  if (!strlen($value[$currentProperty])) {
+                      $emptyProps[] = $currentProperty;
+                  }
+              }
           }
         }
       }

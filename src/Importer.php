@@ -196,13 +196,7 @@ class Importer {
   private function initHostParagraphs() {
     $attached = NULL;
     $should_create = FALSE;
-    $max = $this->mapper->getMaxValues($this->target, $this->configuration);
-    if ($max > -1) {
-      $slices = array_chunk($this->values, $max);
-    }
-    else {
-      $slices = array($this->values);
-    }
+    $slices = $this->sliceValues();
     // If the node entity is new, find the attached (non-saved) Paragraphs:
     if ($this->entity->isNew()) {
       // Get the existing Paragraphs entity:
@@ -746,5 +740,62 @@ class Importer {
       }
     }
     return $slices;
+  }
+
+  /**
+   * Slices values.
+   *
+   * @return array
+   */
+  private function sliceValues(){
+    $max = $this->mapper->getMaxValues($this->target, $this->configuration);
+    if ($max > -1) {
+      // if has sub values:
+      if (count($this->values) > 1) {
+        $flattened = $this->flattenArray($this->values);
+        $slices = array_chunk($flattened, $max);
+      }
+      else {
+        $slices = array_chunk($this->values, $max);
+      }
+    }
+    else {
+      $slices = array($this->values);
+    }
+    return $slices;
+  }
+
+  private function flattenArray($arr, $property = null){
+    $properties = $this->targetInfo->properties;
+    if (!is_array($arr)){
+      $stop = null;
+      if(isset($property)){
+        return [
+          $property => $arr,
+        ];
+      }
+    }
+    $items = [];
+    foreach ($arr as $item) {
+      if(is_array($item)){
+        foreach ($properties as $prop) {
+          if(array_key_exists($prop, $item)){
+            $items = array_merge($items, $this->flattenArray($item, $prop));
+          }
+          elseif (isset($property)){
+            $items = array_merge($items, $this->flattenArray($item, $property));
+          }
+        }
+      }else{
+        if(isset($property)){
+          $items[] = [
+            $property => $item,
+          ];
+        }else{
+          $items[] = $item;
+        }
+      }
+    }
+    return $items;
   }
 }
