@@ -119,11 +119,12 @@ class Mapper
         }
         // If we found nested Paragraphs field,
         // loop through its sub fields to include them:
-        $wrapped = isset($sub_field->target_info);
+        $wrapped = $this->isWrapped($sub_field, $first_host);
         if ($sub_field->getType() === 'entity_reference_revisions' && !$wrapped) {
           $result = $this->getSubFields($sub_field, $result, $first_host);
         }
         else if($sub_field->getType() !== "feeds_item" && !$wrapped){
+          $sub_field = clone $sub_field;
           $host_allowed = $target->getFieldStorageDefinition()->getCardinality();
           $fieldAllowed = $sub_field->getFieldStorageDefinition()->getCardinality();
           $unlimited = FieldStorageDefinitionInterface::CARDINALITY_UNLIMITED;
@@ -147,6 +148,26 @@ class Mapper
       }
     }
     return $result;
+  }
+
+  protected function isWrapped(&$sub_field, $first_host){
+    $wrapped = isset($sub_field->target_info);
+    if(!$wrapped){
+      return false;
+    }
+    $path = $this->buildPath($sub_field, $first_host);
+    $duplicates = 0;
+    foreach ($path as $i => $new_path) {
+      if(isset($sub_field->target_info->path[$i])
+        && $sub_field->target_info->path[$i]['bundle'] === $new_path['bundle']){
+        $duplicates++;
+      }
+    }
+    $wrapped = $duplicates == count($sub_field->target_info->path);
+    if(!$wrapped){
+      unset($sub_field->target_info);
+    }
+    return $wrapped;
   }
 
   /**

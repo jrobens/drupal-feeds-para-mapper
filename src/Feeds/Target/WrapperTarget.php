@@ -103,6 +103,13 @@ class WrapperTarget extends FieldTargetBase implements ConfigurableTargetInterfa
       $last_host = end($path);
       $wrapper_target->setPluginId("wrapper_target");
       $id = $last_host['bundle'] ."_". $field->getName();
+      $exist = isset($targets[$id]);
+      $num = 0;
+      while($exist){
+        $num++;
+        $id .=  "_" . $num;
+        $exist = isset($targets[$id]);
+      };
       $targets[$id] = $wrapper_target;
     }
   }
@@ -199,9 +206,16 @@ class WrapperTarget extends FieldTargetBase implements ConfigurableTargetInterfa
     $class = $plugin['class'];
     $field_definition->set('field_type', $field_type);
     $targetDef = $class::prepareTarget($field_definition);
-    $last_host = end($path);
     $label = $field_definition->getLabel();
-    $label .= ' (' . $last_host['host_field'] .':' . $last_host['bundle'] . ":" . $field_definition->getName() . ')';
+    $label .= ' (';
+    foreach ($path as $i => $host) {
+      if($i +1 === count($path)){
+        $label .= $host['host_field'];
+      }else{
+        $label .= $host['host_field'] . ":";
+      }
+    }
+    $label .= ')';
     $field_definition->set('label', $label);
     $field_definition->set('field_type','entity_reference_revisions');
     return $targetDef;

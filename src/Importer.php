@@ -458,14 +458,17 @@ class Importer {
     $parents = $p['parents'];
     $host = $parent;
     if (count($parents) < $or_count) {
-      $host = end($p['removed']);
+      $removed = end($p['removed']);
+      if($parents[0]['host_entity'] === $removed->getEntityTypeId()){
+        $host = end($p['removed']);
+      }
     }
     $parents = array_filter($parents, function ($item) {
       return isset($item['host_entity']);
     });
     $first = NULL;
-    foreach ($parents as $parent) {
-      $host = $this->createParagraph($parent['host_field'], $parent['bundle'], $host);
+    foreach ($parents as $parent_item) {
+      $host = $this->createParagraph($parent_item['host_field'], $parent_item['bundle'], $host);
       if (!isset($first)) {
         $first = $host;
       }
