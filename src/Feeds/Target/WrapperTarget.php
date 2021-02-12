@@ -132,7 +132,7 @@ class WrapperTarget extends FieldTargetBase implements ConfigurableTargetInterfa
    */
   public function setTarget(FeedInterface $feed, EntityInterface $entity, $field_name, array $values)
   {
-    $empty = $this->isEmpty($values);
+    $empty = $this->isEmpty($feed, $entity, $field_name, $values);
     if ($empty) {
       return;
     }
@@ -157,7 +157,7 @@ class WrapperTarget extends FieldTargetBase implements ConfigurableTargetInterfa
    * @return bool
    *   True if the values are empty.
    */
-  public function isEmpty(array $values){
+  public function isEmpty(FeedInterface $feed, EntityInterface $entity, $field_name, $values = []){
     $properties = $this->targetDefinition->getProperties();
     $emptyValues = 0;
     foreach ($values as $value) {
