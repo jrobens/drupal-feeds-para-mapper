@@ -93,11 +93,11 @@ class WrapperTarget extends FieldTargetBase implements ConfigurableTargetInterfa
     foreach ($sub_fields as $field) {
       $field->set('field_type', 'entity_reference_revisions');
       $wrapper_target = self::prepareTarget($field);
-      $properties = $wrapper_target->getProperties();
-      $mapper->updateInfo($field, 'properties', $properties);
-      if(!isset($wrapper_target)){
+      if (!isset($wrapper_target)) {
         continue;
       }
+      $properties = $wrapper_target->getProperties();
+      $mapper->updateInfo($field, 'properties', $properties);
       $wrapper_target->setPluginId("wrapper_target");
       $path = $mapper->getInfo($field,'path');
       $last_host = end($path);
@@ -118,6 +118,9 @@ class WrapperTarget extends FieldTargetBase implements ConfigurableTargetInterfa
     $plugin = $mapper->getInfo($this->field,'plugin');
     $class = $plugin['class'];
     $target = $class::prepareTarget($this->field);
+    if (!isset($target)) {
+      return null;
+    }
     $target->setPluginId($plugin['id']);
     $instance = null;
     try {
@@ -132,7 +135,7 @@ class WrapperTarget extends FieldTargetBase implements ConfigurableTargetInterfa
    */
   public function setTarget(FeedInterface $feed, EntityInterface $entity, $field_name, array $values)
   {
-    $empty = $this->isEmpty($values);
+    $empty = $this->valuesAreEmpty($values);
     if ($empty) {
       return;
     }
@@ -157,7 +160,7 @@ class WrapperTarget extends FieldTargetBase implements ConfigurableTargetInterfa
    * @return bool
    *   True if the values are empty.
    */
-  public function isEmpty(array $values){
+  public function valuesAreEmpty(array $values){
     $properties = $this->targetDefinition->getProperties();
     $emptyValues = 0;
     foreach ($values as $value) {
@@ -206,6 +209,9 @@ class WrapperTarget extends FieldTargetBase implements ConfigurableTargetInterfa
     $class = $plugin['class'];
     $field_definition->set('field_type', $field_type);
     $targetDef = $class::prepareTarget($field_definition);
+    if (!isset($targetDef)) {
+      return null;
+    }
     $label = $field_definition->getLabel();
     $label .= ' (';
     foreach ($path as $i => $host) {
