@@ -102,7 +102,8 @@ class WrapperTarget extends FieldTargetBase implements ConfigurableTargetInterfa
       $path = $mapper->getInfo($field,'path');
       $last_host = end($path);
       $wrapper_target->setPluginId("wrapper_target");
-      $id = $last_host['bundle'] ."_". $field->getName();
+      $entity_type = $field->getEntityTypeId();
+      $id = $last_host['bundle'] .".entity:paragraph.". $field->getName();
       $exist = isset($targets[$id]);
       $num = 0;
       while($exist){

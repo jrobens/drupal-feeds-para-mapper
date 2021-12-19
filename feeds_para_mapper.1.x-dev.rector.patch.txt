@@ -1,0 +1,20 @@
+diff --git a/feeds_para_mapper.module b/feeds_para_mapper.module
+index 1870432..34f6b2d 100644
+--- a/feeds_para_mapper.module
++++ b/feeds_para_mapper.module
+@@ -1,5 +1,6 @@
+ <?php
+
++use Drupal\Core\Entity\EntityInterface;
+ /**
+ * @file
+ * Allows mapping to Paragraphs fields.
+@@ -107,7 +108,7 @@ function feeds_para_mapper_feeds_targets_alter(&$targets)
+ /**
+  * Implements hook_entity_update().
+  */
+-function feeds_para_mapper_entity_update(Drupal\Core\Entity\EntityInterface $entity)
++function feeds_para_mapper_entity_update(EntityInterface $entity)
+ {
+   if(isset($entity->fpm_targets)){
+     $rev = Drupal::service('feeds_para_mapper.revision_handler');
