@@ -91,6 +91,7 @@ class RevisionHandler
     try {
       $paragraph->save();
     } catch (EntityStorageException $e) {
+      \Drupal::logger('feeds_para_mapper')->warning('Failed to create revision @e', ['@e' => $e->getMessage()]);
       $this->messenger->addError($this->t("Failed to create revision"));
       $this->messenger->addError($e);
     }
@@ -116,6 +117,7 @@ class RevisionHandler
         try {
           $parent->get($host_field)->set($index, $value);
         } catch (MissingDataException $e) {
+          \Drupal::logger('feeds_para_mapper')->warning('@e', ['@e' => $message]);
           $this->messenger->addError($message);
           $this->messenger->addError($e);
         }
@@ -124,6 +126,7 @@ class RevisionHandler
     try {
       $parent->save();
     } catch (EntityStorageException $e) {
+      \Drupal::logger('feeds_para_mapper')->warning('@e', ['@e' => $message]);
       $this->messenger->addError($message);
       $this->messenger->addError($e);
     }

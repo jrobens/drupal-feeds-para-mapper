@@ -1,10 +1,12 @@
 <?php
 
 namespace Drupal\feeds_para_mapper;
+
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Entity\Plugin\DataType\EntityReference;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\feeds\FeedInterface;
 use Drupal\feeds\FeedTypeInterface;
@@ -70,30 +72,31 @@ class Importer {
    * @var Mapper
    */
   protected $mapper;
+
   /**
    * @var FieldTargetBase
    */
   protected $instance;
+
   public function __construct(EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $field_manager, Mapper $mapper) {
-    $this->language       = LanguageInterface::LANGCODE_DEFAULT;
-    $this->field_manager  = $field_manager;
-    $this->mapper         = $mapper;
+    $this->language = LanguageInterface::LANGCODE_DEFAULT;
+    $this->field_manager = $field_manager;
+    $this->mapper = $mapper;
     try {
       $this->paragraph_storage = $entity_type_manager->getStorage('paragraph');
-    }
-    catch (\Exception $e) {
+    } catch (\Exception $e) {
       throw $e;
     }
   }
 
-  public function import(FeedTypeInterface $feedType, FeedInterface $feed, EntityInterface $entity, FieldConfigInterface $target, array $configuration, array $values, FieldTargetBase $instance){
-    $this->feed           = $feed;
-    $this->entity         = $entity;
-    $this->target         = $target;
-    $this->configuration  = $configuration;
-    $this->values         = $values;
-    $this->targetInfo     = $target->get('target_info');
-    $this->instance       = $instance;
+  public function import(FeedTypeInterface $feedType, FeedInterface $feed, EntityInterface $entity, FieldConfigInterface $target, array $configuration, array $values, FieldTargetBase $instance) {
+    $this->feed = $feed;
+    $this->entity = $entity;
+    $this->target = $target;
+    $this->configuration = $configuration;
+    $this->values = $values;
+    $this->targetInfo = $target->get('target_info');
+    $this->instance = $instance;
     //@todo: remove explode()
     // @todo: handle taking a value from $values and adding it to a different bundle field
     //$this->explode();
@@ -102,7 +105,7 @@ class Importer {
     foreach ($paragraphs as $paragraph) {
       $attached = $this->getTarget($paragraph['paragraph'], $this->target);
       $this->setValue($attached[0], $paragraph['value']);
-      if(!$this->entity->isNew()){
+      if (!$this->entity->isNew()) {
         $this->appendToUpdate($attached[0]);
       }
     }
@@ -111,8 +114,9 @@ class Importer {
   /**
    * Resets the fields types to the original types.
    *
-   * In order to avoid the created entity having the wrong fields types (e.g 'entity_reference_revisions'),
-   * we need to reset them back to the original types
+   * In order to avoid the created entity having the wrong fields types (e.g
+   * 'entity_reference_revisions'), we need to reset them back to the original
+   * types
    *
    * @param FieldTargetDefinition[] $targets
    *  The targets that are being mapped.
@@ -132,7 +136,7 @@ class Importer {
    * @param Paragraph $paragraph
    * @param $value
    */
-  private function setValue($paragraph, $value){
+  private function setValue($paragraph, $value) {
     $target = $this->target->getName();
     // Reset the values of the target:
     $paragraph->{$target} = NULL;
@@ -141,6 +145,38 @@ class Importer {
     // @todo: changing the field type is causing the paragraph entity to have wrong field type,
     // even after changing it later to the original type,
     // maybe before creating the paragraph entity we need to change all the field types we are going to map
+
+    // Value is target_id = string for entity_reference. I can't see the mapping to target_id in mapper. Makes sense as it is
+    // a value setter rather than field mapper exercise. How to properly remap to value
+
+    // @jrobens
+    // FieldTargetBase does a merge, so recursive call looks OK.
+    // web/modules/contrib/feeds/src/Plugin/Type/Target/FieldTargetBase.php
+    // web/modules/custom/cbi_feed_alter/src/Feeds/Target/CbiTaxonomyEntityReference.php
+
+    $new_items = [];
+    foreach ($value as $item) {
+      if (array_key_exists('target_id', $item) && !is_numeric($item['target_id'])) {
+        $new_items['value'] = $item['target_id'];
+      }
+
+     /* if (array_key_exists('target_id', $item) && $target == 'field_bond_exchanges') {
+        // If multi-value items then use tamper to split
+      }
+      else {
+
+      }*/
+    }
+
+    if (sizeof($new_items) > 0) {
+      $value = $new_items;
+    }
+
+    foreach ($value as $check_item) {
+      if (is_string($check_item) ){
+        \Drupal::logger('feeds_para_mapper')->notice("Item is a string @check_item", ['@check_item' => $check_item]);
+      }
+    }
 
     $this->instance->setTarget($this->feed, $paragraph, $target, $value);
   }
@@ -153,17 +189,17 @@ class Importer {
    *
    * @see Importer::createRevision()
    */
-  private function appendToUpdate($paragraph){
+  private function appendToUpdate($paragraph) {
     // Add to the entity some information about the current target:
-    $paragraphs = array();
-    if(count($this->targetInfo->paragraphs)){
+    $paragraphs = [];
+    if (count($this->targetInfo->paragraphs)) {
       $paragraphs = $this->targetInfo->paragraphs;
     }
     $paragraphs[] = $paragraph;
     $this->targetInfo->paragraphs = $paragraphs;
     $this->target->set('target_info', $this->targetInfo);
-    $fpm_targets = array();
-    if(isset($this->entity->fpm_targets)){
+    $fpm_targets = [];
+    if (isset($this->entity->fpm_targets)) {
       $fpm_targets = $this->entity->fpm_targets;
     }
     $current_target = $this->target->getName();
@@ -171,14 +207,14 @@ class Importer {
     $this->entity->fpm_targets = $fpm_targets;
   }
 
-  private function explode(){
-    $values = array();
+  private function explode() {
+    $values = [];
     $final = [$this->values];
-    if(strpos($this->values[0]['value'],'|') !== FALSE){
+    if (strpos($this->values[0]['value'], '|') !== FALSE) {
       $values = explode('|', $this->values[0]['value']);
     }
     if (is_array($values)) {
-      $final = array();
+      $final = [];
       foreach ($values as $value) {
         $list = explode(',', $value);
         foreach ($list as $item) {
@@ -207,7 +243,7 @@ class Importer {
     }
     else {
       // Load existing paragraph:
-      $attached = $this->loadTarget($this->entity,$this->target);
+      $attached = $this->loadTarget($this->entity, $this->target);
     }
     if (count($attached)) {
       // Check if we should create new Paragraphs entities:
@@ -244,9 +280,9 @@ class Importer {
    * @return Paragraph[]
    *   The found paragraphs.
    */
-  private function getTarget($entity, $targetConfig, array $result = array()) {
-    $path = $this->mapper->getInfo($targetConfig,'path');
-    $last_key = count($path) -1;
+  private function getTarget($entity, $targetConfig, array $result = []) {
+    $path = $this->mapper->getInfo($targetConfig, 'path');
+    $last_key = count($path) - 1;
     $last_host_field = $path[$last_key]['host_field'];
     $target = $targetConfig->getName();
     if (count($path) > 1) {
@@ -257,29 +293,33 @@ class Importer {
           $result[] = $value['entity'];
         }
       }
-      elseif($exist = $entity->hasField($target)){
+      elseif ($exist = $entity->hasField($target)) {
         $result[] = $entity;
       }
       else {
         foreach ($path as $host_info) {
           $field_exist = $entity->hasField($host_info['host_field']);
-          if($field_exist){
+          if ($field_exist) {
             $values = $entity->get($host_info['host_field'])->getValue();
             foreach ($values as $value) {
-              $result = self::getTarget($value['entity'], $targetConfig,$result);
+              $result = self::getTarget($value['entity'], $targetConfig, $result);
             }
           }
         }
       }
     }
-    else if (!($entity instanceof Paragraph) && $entity->hasField($path[0]['host_field'])) {
-      $values = $entity->get($path[0]['host_field'])->getValue();
-      foreach ($values as $value) {
-        $result[] = $value['entity'];
+    else {
+      if (!($entity instanceof Paragraph) && $entity->hasField($path[0]['host_field'])) {
+        $values = $entity->get($path[0]['host_field'])->getValue();
+        foreach ($values as $value) {
+          $result[] = $value['entity'];
+        }
       }
-    }
-    else if ($entity instanceof Paragraph && $exists = $entity->hasField($target)) {
-      $result[] = $entity;
+      else {
+        if ($entity instanceof Paragraph && $exists = $entity->hasField($target)) {
+          $result[] = $entity;
+        }
+      }
     }
     return $result;
   }
@@ -298,24 +338,24 @@ class Importer {
    * @return Paragraph[]
    *   The loaded Paragraphs entities.
    */
-  public function loadTarget($entity, $targetInstance,  array $result = array()){
+  public function loadTarget($entity, $targetInstance, array $result = []) {
     $targetInfo = $targetInstance->get('target_info');
     $path = $targetInfo->path;
     $target = $targetInstance->getName();
-    if (count($path) > 1){
-      $path[] = array(
+    if (count($path) > 1) {
+      $path[] = [
         'host_field' => $target,
-      );
-      if ($exist = $entity->hasField($target)){
+      ];
+      if ($exist = $entity->hasField($target)) {
         $result[] = $entity;
       }
       else {
         foreach ($path as $host_info) {
-          if($exist = $entity->hasField($host_info['host_field'])){
+          if ($exist = $entity->hasField($host_info['host_field'])) {
             $values = $entity->get($host_info['host_field'])->getValue();
             foreach ($values as $value) {
               $paragraph = $this->paragraph_storage->load($value['target_id']);
-              if($paragraph){
+              if ($paragraph) {
                 $result = $this->loadTarget($paragraph, $targetInstance, $result);
               }
             }
@@ -347,10 +387,10 @@ class Importer {
    *   The created Paragraphs entities based on the $slices
    */
   private function createParagraphs($entity, array $slices) {
-    $items = array();
+    $items = [];
     for ($i = 0; $i < count($slices); $i++) {
       $should_create = $this->shouldCreateNew($entity, $slices, $slices[$i]);
-      if(!$should_create){
+      if (!$should_create) {
         return $items;
       }
       if ($i === 0) {
@@ -366,10 +406,10 @@ class Importer {
         $par = $this->duplicateExisting($last);
       }
       if ($par) {
-        $items[] = array(
+        $items[] = [
           'paragraph' => $par,
           'value' => $slices[$i],
-        );
+        ];
       }
     }
     return $items;
@@ -387,10 +427,10 @@ class Importer {
    *   The updated entities.
    */
   private function updateParagraphs($entities, array $slices) {
-    $items = array();
+    $items = [];
     $slices = $this->checkValuesChanges($slices, $entities);
     for ($i = 0; $i < count($slices); $i++) {
-      if(!isset($entities[$i])){
+      if (!isset($entities[$i])) {
         continue;
       }
       // we should never delete data, if we should remove the entity then just ignore it,
@@ -398,11 +438,11 @@ class Importer {
       if ($slices[$i]['state'] !== "remove") {
         $state = $slices[$i]['state'];
         unset($slices[$i]['state']);
-        $items[] = array(
+        $items[] = [
           'paragraph' => $entities[$i],
           'value' => $slices[$i],
-          'state' => $state
-        );
+          'state' => $state,
+        ];
       }
     }
     return $items;
@@ -422,7 +462,7 @@ class Importer {
    *   The newly created and updated entities.
    */
   private function appendParagraphs(array $entities, array $slices) {
-    $items = array();
+    $items = [];
     $slices = $this->checkValuesChanges($slices, $entities);
     for ($i = 0; $i < count($slices); $i++) {
       $state = $slices[$i]['state'];
@@ -436,11 +476,11 @@ class Importer {
       else {
         $paragraph = $entities[$i];
       }
-      $items[] = array(
+      $items[] = [
         'paragraph' => $paragraph,
         'value' => $slices[$i],
         'state' => $state,
-      );
+      ];
     }
     return $items;
   }
@@ -462,7 +502,7 @@ class Importer {
     $host = $parent;
     if (count($parents) < $or_count) {
       $removed = end($p['removed']);
-      if($parents[0]['host_entity'] === $removed->getEntityTypeId()){
+      if ($parents[0]['host_entity'] === $removed->getEntityTypeId()) {
         $host = end($p['removed']);
       }
     }
@@ -485,63 +525,77 @@ class Importer {
    * @param Paragraph $existing
    *   The existing Paragraph entity.
    *
-   * @return Paragraph
+   * @return EntityInterface
    *   The duplicated entity, or null on failure.
    */
   private function duplicateExisting($existing) {
-    if($existing->isNew()){
+    if ($existing->isNew()) {
       $host_info = $existing->host_info;
     }
     else {
-      $host_info = array();
+      $host_info = [];
       $parent = $existing->getParentEntity();
       $host_info['bundle'] = $existing->getType();
-      $host_info['field'] = $existing->get('parent_field_name')->getValue()[0]['value'];
+      $host_info['field'] = $existing->get('parent_field_name')
+        ->getValue()[0]['value'];
       $host_info['entity'] = $parent;
     }
-    return $this->createParagraph($host_info['field'],$host_info['bundle'],$host_info['entity']);
+    return $this->createParagraph($host_info['field'], $host_info['bundle'], $host_info['entity']);
   }
 
   /**
    * Remove the created parents of the target field from the parents array.
    *
    * @param array $parents
-   *   The parents of the field @see Mapper::buildPath().
-   *
-   * @return array
+   *   The parents of the field @return array
    *   The non-existing parents array.
+   *
+   * @see Mapper::buildPath().
+   *
    */
   private function removeExistingParents(array $parents) {
     $field_manager = $this->field_manager;
+
     $findByField = function ($entity, $field) use (&$findByField, $field_manager) {
       $p_c = Paragraph::class;
       $found = NULL;
+
       if (get_class($entity) === $p_c) {
-        if ($exist = $entity->hasField($field) && count($entity->get($field)->getValue())) {
+        if ($exist = $entity->hasField($field) && count($entity->get($field)
+            ->getValue())) {
           $found = $entity;
         }
       }
-      else if($exist = $entity->hasField($field) && count($entity->get($field)->getValue())){
-        $found = $entity;
-      }
       else {
-        $type = $entity->getEntityTypeId();
-        $bundle = $entity->bundle();
-        $fields = $field_manager->getFieldDefinitions($type,$bundle);
-        $fields = array_filter($fields, function ($field){
-          return $field instanceof FieldConfigInterface;
-        });
-        foreach ($fields as $field_name => $entity_field) {
-          if($entity_field->getType() === 'entity_reference_revisions'){
-            $values = $entity->get($field_name)->getValue();
-            foreach ($values as $value) {
-              $found = $findByField($value['entity'], $field);
+        if ($exist = $entity->hasField($field) && count($entity->get($field)
+            ->getValue())) {
+          $found = $entity;
+        }
+        else {
+          $type = $entity->getEntityTypeId();
+          $bundle = $entity->bundle();
+          $fields = $field_manager->getFieldDefinitions($type, $bundle);
+          $fields = array_filter($fields, function ($field) {
+            return $field instanceof FieldConfigInterface;
+          });
+          foreach ($fields as $field_name => $entity_field) {
+            if ($entity_field->getType() === 'entity_reference_revisions') {
+              $values = $entity->get($field_name)->getValue();
+              foreach ($values as $value) {
+                // $value = ['target_id' => 511, target_revision_id => 871]
+                // Empty paragraph container. @jrobens could be completely wrong, picking values that aren't entities.
+                if (array_key_exists('entity', $value)) {
+                  $found = $findByField($value['entity'], $field);
+                }
+              }
             }
           }
         }
       }
       return $found;
     };
+
+
     $removed = [];
     $to_remove = [];
     for ($i = 0; $i < count($parents); $i++) {
@@ -573,18 +627,18 @@ class Importer {
    * @param ContentEntityInterface $host_entity
    *   The host entity.
    *
-   * @return Paragraph
+   * @return EntityInterface
    *   The created Paragraphs entity
    */
   private function createParagraph($field, $bundle, $host_entity) {
-    $created = $this->paragraph_storage->create(array("type" => $bundle));
+    $created = $this->paragraph_storage->create(["type" => $bundle]);
     $host_entity->get($field)->appendItem($created);
-    $host_info = array(
+    $host_info = [
       'type' => $host_entity->getEntityTypeId(),
       'entity' => $host_entity,
       'bundle' => $bundle,
       'field' => $field,
-    );
+    ];
     $created->host_info = $host_info;
     return $created;
   }
@@ -605,10 +659,10 @@ class Importer {
    * @return bool
    *   TRUE if we should create new Paragraphs entity.
    */
-  private function shouldCreateNew($entity, array $slices, array $futureValue = array()) {
+  private function shouldCreateNew($entity, array $slices, array $futureValue = []) {
     $path = $this->targetInfo->path;
     if (count($path) > 1 && $entity instanceof Paragraph) {
-      $host_field = $path[count($path) -1]['host_field'];
+      $host_field = $path[count($path) - 1]['host_field'];
       $host = $entity->getParentEntity();
     }
     else {
@@ -617,7 +671,9 @@ class Importer {
       $host = $this->entity;
     }
     $current_values = $host->get($host_field)->getValue();
-    $host_field_storage = $host->get($host_field)->getFieldDefinition()->getFieldStorageDefinition();
+    $host_field_storage = $host->get($host_field)
+      ->getFieldDefinition()
+      ->getFieldStorageDefinition();
     $allowed = (int) $host_field_storage->getCardinality();
     $skip_check = $allowed === -1;
     // If the parent cannot hold anymore values, we should not:
@@ -678,15 +734,15 @@ class Importer {
       if (!isset($paragraph->{$target})) {
         return "shareable";
       }
-      $foundValues = array();
+      $foundValues = [];
       $targetValues = $paragraph->get($target)->getValue();
       foreach ($chunk as $index => $chunkVal) {
-        $found_sub_fields = array();
+        $found_sub_fields = [];
         $changed = NULL;
-        if(isset($targetValues[$index])){
-          $targetValue =  $targetValues[$index];
+        if (isset($targetValues[$index])) {
+          $targetValue = $targetValues[$index];
           foreach ($chunkVal as $sub_field => $sub_field_value) {
-            if(isset($targetValue[$sub_field])){
+            if (isset($targetValue[$sub_field])) {
               $found_sub_fields[] = $sub_field;
               $changed = $targetValue[$sub_field] !== $sub_field_value;
             }
@@ -696,22 +752,22 @@ class Importer {
             }
           }
         }
-        if(count($found_sub_fields) <= count(array_keys($chunkVal))){
+        if (count($found_sub_fields) <= count(array_keys($chunkVal))) {
           $value = [
             "chunk_value" => $chunkVal,
-            'state' => $changed ? "changed": "unchanged",
+            'state' => $changed ? "changed" : "unchanged",
           ];
           $foundValues[] = $value;
         }
       }
       $changed = FALSE;
       foreach ($foundValues as $foundValue) {
-        if($foundValue['state'] === "changed"){
+        if ($foundValue['state'] === "changed") {
           $changed = TRUE;
           break;
         }
       }
-      if(!count($targetValues)){
+      if (!count($targetValues)) {
         $changed = TRUE;
       }
       $state = $changed ? "changed" : "unchanged";
@@ -725,12 +781,20 @@ class Importer {
     // Search for empty paragraphs:
     for ($i = 0; $i < count($entities); $i++) {
       $has_common = FALSE;
-      $in_common = $this->mapper->getInfo($this->target,'in_common');
+      $in_common = $this->mapper->getInfo($this->target, 'in_common');
       if (isset($in_common)) {
         $has_common = TRUE;
-        $empty_commons = array();
+        $empty_commons = [];
         foreach ($in_common as $fieldInfo) {
-          if (!isset($entities[$i]->{$field['name']})) {
+          if (is_null($entities)) {
+            \Drupal::logger('feeds_para_mapper')
+              ->warning('checkValuesChanges. Entities is null');
+          }
+          if (is_null($fieldInfo)) {
+            \Drupal::logger('feeds_para_mapper')
+              ->warning('checkValuesChanges. Field is null');
+          }
+          if (!isset($entities[$i]->{$fieldInfo['name']})) {
             $empty_commons[] = $fieldInfo;
           }
         }
@@ -740,9 +804,9 @@ class Importer {
         }
       }
       if (!isset($slices[$i]) && !$has_common) {
-        $slices[$i] = array(
+        $slices[$i] = [
           'state' => 'remove',
-        );
+        ];
       }
     }
     return $slices;
@@ -753,7 +817,7 @@ class Importer {
    *
    * @return array
    */
-  private function sliceValues(){
+  private function sliceValues() {
     $max = $this->mapper->getMaxValues($this->target, $this->configuration);
     if ($max > -1) {
       // if has sub values:
@@ -766,16 +830,16 @@ class Importer {
       }
     }
     else {
-      $slices = array($this->values);
+      $slices = [$this->values];
     }
     return $slices;
   }
 
-  private function flattenArray($arr, $property = null){
+  private function flattenArray($arr, $property = NULL) {
     $properties = $this->targetInfo->properties;
-    if (!is_array($arr)){
-      $stop = null;
-      if(isset($property)){
+    if (!is_array($arr)) {
+      $stop = NULL;
+      if (isset($property)) {
         return [
           $property => $arr,
         ];
@@ -783,25 +847,28 @@ class Importer {
     }
     $items = [];
     foreach ($arr as $item) {
-      if(is_array($item)){
+      if (is_array($item)) {
         foreach ($properties as $prop) {
-          if(array_key_exists($prop, $item)){
+          if (array_key_exists($prop, $item)) {
             $items = array_merge($items, $this->flattenArray($item, $prop));
           }
-          elseif (isset($property)){
+          elseif (isset($property)) {
             $items = array_merge($items, $this->flattenArray($item, $property));
           }
         }
-      }else{
-        if(isset($property)){
+      }
+      else {
+        if (isset($property)) {
           $items[] = [
             $property => $item,
           ];
-        }else{
+        }
+        else {
           $items[] = $item;
         }
       }
     }
     return $items;
   }
+
 }

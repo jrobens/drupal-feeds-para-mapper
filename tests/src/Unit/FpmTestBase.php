@@ -13,6 +13,9 @@ use Drupal\feeds\Plugin\Type\Target\FieldTargetBase;
 use Drupal\feeds_para_mapper\Feeds\Target\WrapperTarget;
 use Drupal\feeds_para_mapper\Mapper;
 use Drupal\feeds_para_mapper\Utility\TargetInfo;
+use Drupal\Tests\feeds\Traits\FeedCreationTrait;
+use Drupal\Tests\feeds\Traits\FeedsCommonTrait;
+use Drupal\Tests\feeds\Traits\FeedsReflectionTrait;
 use Drupal\Tests\feeds_para_mapper\Unit\Helpers\EntityHelper;
 use Drupal\Tests\feeds_para_mapper\Unit\Helpers\FieldHelper;
 use Drupal\Tests\UnitTestCase;
@@ -20,8 +23,12 @@ use Prophecy\Argument;
 use Prophecy\Prophecy\ObjectProphecy;
 use ReflectionClass;
 use Drupal\Core\DependencyInjection\ContainerBuilder;
-abstract class FpmTestBase extends UnitTestCase
-{
+abstract class FpmTestBase extends UnitTestCase {
+
+  use FeedCreationTrait;
+  use FeedsCommonTrait;
+  use FeedsReflectionTrait;
+
   /**
    * The field helper instance.
    *
@@ -204,6 +211,8 @@ abstract class FpmTestBase extends UnitTestCase
   protected function getFeedTypeMock() {
     $feed_type = $this->createMock(FeedTypeInterface::class);
     $processor = $this->getProcessorMock();
+
+
     $feed_type->id = 'test_feed_type';
     $feed_type->description = 'This is a test feed type';
     $feed_type->label = 'Test feed type';

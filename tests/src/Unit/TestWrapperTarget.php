@@ -120,4 +120,25 @@ class TestWrapperTarget extends FpmTestBase {
     $field_type = $targets['bundle_two_text']->getFieldDefinition()->field_type;
     $this->assertSame('entity_reference_revisions', $field_type,'target field type is changed');
   }
+
+  public function testTargetsTaxonomy(){
+    $targets = array();
+    $this->wrapperTarget->targets($targets,$this->feedType,array());
+    $this->assertTrue(isset($targets['bundle_two_text']),'Target added');
+    $field_type = $targets['bundle_two_text']->getFieldDefinition()->field_type;
+    $this->assertSame('entity_reference_revisions', $field_type,'target field type is changed');
+  }
 }
+
+/*
+ *
+ */
+$definition = [
+  'id' => 'wrapper_target',
+  'field_types' => ['entity_reference_revisions'],
+  'arguments' => ['@messenger', '@plugin.manager.feeds.target','@feeds_para_mapper.mapper'],
+  'class' => 'Drupal\feeds_para_mapper\Feeds\Target\WrapperTarget',
+  'provider' => 'feeds_para_mapper',
+  'plugin_type' => 'target',
+  'form' => ['configuration' => "Drupal\feeds_para_mapper\Feeds\Target\WrapperTarget"]
+];
