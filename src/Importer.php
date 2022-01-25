@@ -97,12 +97,24 @@ class Importer {
     $this->values = $values;
     $this->targetInfo = $target->get('target_info');
     $this->instance = $instance;
-    //@todo: remove explode()
     // @todo: handle taking a value from $values and adding it to a different bundle field
-    //$this->explode();
     $this->resetTypes($feedType->getMappingTargets());
     $paragraphs = $this->initHostParagraphs();
     foreach ($paragraphs as $paragraph) {
+      $the_paragraph = $paragraph['paragraph'];
+      /*  if ($the_paragraph->get('host_info')) {
+
+        }*/
+      if ($the_paragraph->bundle() == 'paragraph_other_information') {
+        $debug_me = TRUE;
+      }
+
+      $parent_type = $the_paragraph->get('parent_type');
+      $parent_field_list = $the_paragraph->get('parent_id');
+      $parent = $the_paragraph->getParentEntity();
+      $paragraph_type = $the_paragraph->getParagraphType();
+      $the_paragraph->getTypedData()->getEntity();
+
       $attached = $this->getTarget($paragraph['paragraph'], $this->target);
       $this->setValue($attached[0], $paragraph['value']);
       if (!$this->entity->isNew()) {
@@ -140,6 +152,8 @@ class Importer {
     $target = $this->target->getName();
     // Reset the values of the target:
     $paragraph->{$target} = NULL;
+
+
     // We call setTarget on the target plugin instance, and it will call prepareValues,
     // which will eventually set the value for the field.
     // @todo: changing the field type is causing the paragraph entity to have wrong field type,
@@ -154,28 +168,25 @@ class Importer {
     // web/modules/contrib/feeds/src/Plugin/Type/Target/FieldTargetBase.php
     // web/modules/custom/cbi_feed_alter/src/Feeds/Target/CbiTaxonomyEntityReference.php
 
-    $new_items = [];
-    foreach ($value as $item) {
-      if (array_key_exists('target_id', $item) && !is_numeric($item['target_id'])) {
-        $new_items['value'] = $item['target_id'];
-      }
 
-     /* if (array_key_exists('target_id', $item) && $target == 'field_bond_exchanges') {
-        // If multi-value items then use tamper to split
-      }
-      else {
+    // Strings web/modules/contrib/feeds/src/Plugin/Type/Target/FieldTargetBase.php expects $values[0]['value']
+    // Entity Reference expects $values[0]['target_id'] web/modules/contrib/feeds/src/Feeds/Target/EntityReference.php
 
-      }*/
+    if ($target == 'field_bond_stock_exchanges') {
+      $debug = TRUE;
     }
-
-    if (sizeof($new_items) > 0) {
-      $value = $new_items;
+    if ($target == 'field_bond_issuer') {
+      $debug = TRUE;
     }
-
     foreach ($value as $check_item) {
-      if (is_string($check_item) ){
-        \Drupal::logger('feeds_para_mapper')->notice("Item is a string @check_item", ['@check_item' => $check_item]);
+      if (is_string($check_item)) {
+        \Drupal::logger('feeds_para_mapper')
+          ->notice("Item is a string @check_item", ['@check_item' => $check_item]);
       }
+    }
+
+    if ($target == 'feeds_item') {
+      $debug = true;
     }
 
     $this->instance->setTarget($this->feed, $paragraph, $target, $value);
@@ -205,25 +216,6 @@ class Importer {
     $current_target = $this->target->getName();
     $fpm_targets[$current_target] = $this->target;
     $this->entity->fpm_targets = $fpm_targets;
-  }
-
-  private function explode() {
-    $values = [];
-    $final = [$this->values];
-    if (strpos($this->values[0]['value'], '|') !== FALSE) {
-      $values = explode('|', $this->values[0]['value']);
-    }
-    if (is_array($values)) {
-      $final = [];
-      foreach ($values as $value) {
-        $list = explode(',', $value);
-        foreach ($list as $item) {
-          $val = ['value' => $item];
-          $final[] = $val;
-        }
-      }
-    }
-    $this->values = $final;
   }
 
   /**
@@ -263,6 +255,20 @@ class Importer {
       // We didn't find any attached paragraph.
       // Get the allowed values per each paragraph entity.
       $items = $this->createParagraphs($this->entity, $slices);
+    }
+
+    // Debug why there is no parent entity on the paragraph
+    $parentEntity = $items[0]['paragraph']->getParentEntity();
+    if (!$parentEntity) {
+      \Drupal::logger('feeds_para_mapper')
+        ->notice('Failed to load parent for paragraph @id', ['@id' => $items[0]['paragraph']->bundle()]);
+      return $items;
+    }
+
+    $parentEntityId = $items[0]['paragraph']->getParentEntity()->id();
+    if (!$parentEntityId) {
+      \Drupal::logger('feeds_para_mapper')
+        ->notice('Failed to load parent for paragraph @id', ['@id' => $parentEntityId]);
     }
     return $items;
   }

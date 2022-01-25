@@ -233,10 +233,6 @@ class WrapperTarget extends FieldTargetBase implements ConfigurableTargetInterfa
       return null;
     }
     $class = $plugin['class'];
-   if ($field_type == 'cbi_entity_reference' && $class == 'Drupal\feeds\Feeds\Target\EntityReference') {
-      $class = 'Drupal\cbi_feed_alter\Feeds\Target\CbiTaxonomyEntityReference';
-    }
-
     $field_definition->set('field_type', $field_type);
 
     // Taxonomy web/modules/contrib/feeds/src/Feeds/Target/ConfigEntityReference.php. Doesn't implement ConfigEntityInterface

@@ -78,7 +78,7 @@ class Mapper {
           }
           if (in_array($field->getType(), $plugin['field_types'])) {
             if ($field->getType() == 'entity_reference') {
-              \Drupal::logger('feeds_para_mapper')->notice('Found entity reference field @name ', ['@name' => $field->getName()]);
+    //          \Drupal::logger('feeds_para_mapper')->notice('Found entity reference field @name ', ['@name' => $field->getName()]);
             }
             $this->updateInfo($field, "plugin", $plugin);
             $this->updateInfo($field, "type", $field->getType());
@@ -285,9 +285,9 @@ class Mapper {
     if (property_exists(TargetInfo::class, $property)) {
       $res = $info->{$property};
     }
-    if ($field->get('field_name') == 'field_bond_stock_exchanges' && $res == 'entity_reference') {
+/*    if ($field->get('field_name') == 'field_bond_stock_exchanges' && $res == 'entity_reference') {
       $res = 'cbi_entity_reference';
-    }
+    }*/
     return $res;
   }
 
